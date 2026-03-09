@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Tienda - Productos</title>
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="manifest.json">
+    
+    <!-- Meta tags para PWA -->
+    <meta name="theme-color" content="#3498db">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    
+    <!-- CSS -->
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Splash Screen simple -->
+    <div id="splash" class="splash">
+        <div class="splash-content">
+            <h1>🛍️ Tienda</h1>
+            <p>Cargando productos...</p>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <header>
+        <div class="header-container">
+            <h1>🛍️ Tienda</h1>
+            <div id="connection-status" class="connection-status online">📶</div>
+        </div>
+    </header>
+
+    <!-- Barra de búsqueda -->
+    <div class="search-bar">
+        <input type="text" id="searchInput" placeholder="Buscar productos..." class="search-input">
+    </div>
+
+    <!-- Contenedor de productos -->
+    <main>
+        <div id="productos-container" class="productos-grid">
+            <!-- Los productos se cargarán aquí -->
+        </div>
+    </main>
+
+    <!-- Botón de instalar PWA -->
+    <button id="install-button" class="install-button" style="display: none;">
+        📲 Instalar App
+    </button>
+
+    <!-- Notificaciones -->
+    <div id="notification" class="notification"></div>
+
+    <script src="app.js"></script>
+</body>
+</html>
