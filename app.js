@@ -1,5 +1,5 @@
 // ===========================================
-// APP TIENDA CLIENTES - VERSIÓN COMPLETA
+// APP TIENDA CLIENTES - VERSIÓN COMPLETA CORREGIDA
 // ===========================================
 
 const API_URL = 'https://sistema-test-api.onrender.com';
@@ -13,7 +13,10 @@ const App = {
     historial: JSON.parse(localStorage.getItem('historial')) || [],
     currentPage: 'dashboard',
     online: navigator.onLine,
-    installPrompt: null
+    installPrompt: null,
+    qrScanner: null,
+    productoEscanearTemp: null,
+    cantidadEscanearTemp: 1
 };
 
 // Elementos del DOM
@@ -29,7 +32,11 @@ const DOM = {
     productoModal: document.getElementById('productoModal'),
     modalProductoNombre: document.getElementById('modalProductoNombre'),
     modalProductoBody: document.getElementById('modalProductoBody'),
-    menuBtn: document.getElementById('menuBtn')
+    menuBtn: document.getElementById('menuBtn'),
+    qrModal: document.getElementById('qrModal'),
+    qrModalBody: document.getElementById('qrModalBody'),
+    productoEscanearModal: document.getElementById('productoEscanearModal'),
+    productoEscanearBody: document.getElementById('productoEscanearBody')
 };
 
 // ===== INICIALIZACIÓN =====
@@ -106,8 +113,8 @@ function mostrarPagina(pagina) {
         case 'dashboard':
             html = generarDashboard();
             break;
-        case 'categorias':
-            html = generarCategorias();
+        case 'escanear':
+            html = generarEscanear();
             break;
         case 'favoritos':
             html = generarFavoritos();
@@ -181,12 +188,26 @@ function generarDashboard() {
     `;
 }
 
-function generarCategorias() {
+function generarEscanear() {
     return `
         <div class="page active">
-            <h2 class="page-title">📊 Categorías</h2>
-            <div class="categorias-grid">
-                ${generarCategoriasHTML(App.categorias)}
+            <h2 class="page-title">📷 Escanear Código QR</h2>
+            
+            <div style="text-align: center; margin: 1rem 0;">
+                <p style="color: #666; margin-bottom: 1rem;">Escanea el código QR de un producto para agregarlo al carrito</p>
+                
+                <div style="display: flex; gap: 1rem; justify-content: center; margin-bottom: 2rem;">
+                    <button id="btnCamara" class="btn-accion" style="background: var(--primary-color); color: white; border: none; padding: 1rem; border-radius: 50px; font-size: 1rem; flex: 1; max-width: 200px;">
+                        📷 Usar Cámara
+                    </button>
+                    
+                    <button id="btnArchivo" class="btn-accion" style="background: var(--secondary-color); color: white; border: none; padding: 1rem; border-radius: 50px; font-size: 1rem; flex: 1; max-width: 200px;">
+                        📁 Subir Imagen
+                    </button>
+                </div>
+                
+                <div id="qr-reader" style="width: 100%; max-width: 500px; margin: 0 auto; display: none;"></div>
+                <div id="qr-reader-results" style="margin-top: 1rem; color: #666;"></div>
             </div>
         </div>
     `;
@@ -419,7 +440,7 @@ function filtrarPorCategoria(categoriaId) {
     
     const html = `
         <div class="page active">
-            <h2 class="page-title">${categoria.nombre}</h2>
+            <h2 class="page-title">${categoria ? categoria.nombre : 'Categoría'}</h2>
             <div class="productos-grid">
                 ${generarProductosHTML(productosFiltrados)}
             </div>
@@ -488,29 +509,35 @@ function toggleFavorito(id) {
 }
 
 // ===== FUNCIONES DE CARRITO =====
-function agregarAlCarrito(id) {
+function agregarAlCarrito(id, cantidad = 1) {
     const producto = App.productos.find(p => p.id === id);
     if (!producto || producto.stock === 0) {
         mostrarNotificacion('❌ Producto no disponible');
-        return;
+        return false;
     }
     
     const itemExistente = App.carrito.find(item => item.id === id);
     
     if (itemExistente) {
-        if (itemExistente.cantidad < producto.stock) {
-            itemExistente.cantidad++;
+        if (itemExistente.cantidad + cantidad <= producto.stock) {
+            itemExistente.cantidad += cantidad;
         } else {
             mostrarNotificacion('❌ Stock insuficiente');
-            return;
+            return false;
         }
     } else {
-        App.carrito.push({ id, cantidad: 1 });
+        if (cantidad <= producto.stock) {
+            App.carrito.push({ id, cantidad: cantidad });
+        } else {
+            mostrarNotificacion('❌ Stock insuficiente');
+            return false;
+        }
     }
     
     localStorage.setItem('carrito', JSON.stringify(App.carrito));
     actualizarBadgeCarrito();
-    mostrarNotificacion('✅ Producto agregado al carrito');
+    mostrarNotificacion(`✅ ${cantidad} producto(s) agregado(s) al carrito`);
+    return true;
 }
 
 function modificarCantidad(id, delta) {
@@ -551,6 +578,15 @@ function completarCompra() {
         return;
     }
     
+    // Verificar stock antes de completar
+    for (const item of App.carrito) {
+        const producto = App.productos.find(p => p.id === item.id);
+        if (!producto || producto.stock < item.cantidad) {
+            mostrarNotificacion(`❌ Stock insuficiente para ${producto.nombre}`);
+            return;
+        }
+    }
+    
     const total = App.carrito.reduce((sum, item) => {
         const producto = App.productos.find(p => p.id === item.id);
         return sum + (producto ? producto.precio * item.cantidad : 0);
@@ -579,13 +615,227 @@ function completarCompra() {
     
     actualizarBadgeCarrito();
     mostrarPagina('historial');
-    mostrarNotificacion('✅ Compra completada con éxito');
+    mostrarNotificacion('✅ ¡Compra completada con éxito!');
 }
 
 function actualizarBadgeCarrito() {
     const totalItems = App.carrito.reduce((sum, item) => sum + item.cantidad, 0);
     DOM.cartBadge.textContent = totalItems;
     DOM.cartBadge.style.display = totalItems > 0 ? 'flex' : 'none';
+}
+
+// ===== FUNCIONES DE ESCÁNER QR =====
+function iniciarEscaner() {
+    DOM.qrModal.classList.add('active');
+    
+    DOM.qrModalBody.innerHTML = `
+        <div style="text-align: center;">
+            <div id="qr-reader" style="width: 100%; max-width: 500px; margin: 0 auto;"></div>
+            <div id="qr-reader-results" style="margin-top: 1rem; color: #666;"></div>
+            
+            <div style="display: flex; gap: 1rem; justify-content: center; margin-top: 1rem;">
+                <button id="btnCambiarCamara" class="btn-accion" style="background: var(--primary-color); color: white; border: none; padding: 0.8rem; border-radius: 50px; font-size: 0.9rem; flex: 1;">
+                    🔄 Cambiar Cámara
+                </button>
+                
+                <button onclick="cerrarQrModal()" style="background: #e74c3c; color: white; border: none; padding: 0.8rem; border-radius: 50px; font-size: 0.9rem; flex: 1;">
+                    ✖ Cerrar
+                </button>
+            </div>
+        </div>
+    `;
+    
+    const html5QrCode = new Html5Qrcode("qr-reader");
+    App.qrScanner = html5QrCode;
+    
+    const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+    
+    html5QrCode.start(
+        { facingMode: "environment" },
+        config,
+        onScanSuccess,
+        onScanError
+    );
+    
+    document.getElementById('btnCambiarCamara')?.addEventListener('click', () => {
+        cambiarCamara();
+    });
+}
+
+function iniciarEscanerArchivo() {
+    DOM.qrModal.classList.add('active');
+    
+    DOM.qrModalBody.innerHTML = `
+        <div style="text-align: center;">
+            <input type="file" id="qr-input-file" accept="image/*" style="margin-bottom: 1rem;">
+            <div id="qr-reader-results" style="margin-top: 1rem; color: #666;"></div>
+            
+            <button onclick="cerrarQrModal()" style="background: #e74c3c; color: white; border: none; padding: 0.8rem; border-radius: 50px; font-size: 0.9rem; width: 100%; margin-top: 1rem;">
+                ✖ Cerrar
+            </button>
+        </div>
+    `;
+    
+    document.getElementById('qr-input-file').addEventListener('change', (e) => {
+        if (e.target.files.length === 0) {
+            return;
+        }
+        
+        const file = e.target.files[0];
+        const html5QrCode = new Html5Qrcode("qr-reader");
+        
+        html5QrCode.scanFile(file, true)
+            .then(decodedText => {
+                onScanSuccess(decodedText);
+            })
+            .catch(err => {
+                document.getElementById('qr-reader-results').innerHTML = `
+                    <div style="color: #e74c3c;">
+                        ❌ Error al escanear: No se pudo leer el código QR
+                    </div>
+                `;
+            });
+    });
+}
+
+function cambiarCamara() {
+    if (App.qrScanner) {
+        App.qrScanner.stop().then(() => {
+            const newFacingMode = App.qrScanner._facingMode === 'environment' ? 'user' : 'environment';
+            
+            App.qrScanner.start(
+                { facingMode: newFacingMode },
+                { fps: 10, qrbox: { width: 250, height: 250 } },
+                onScanSuccess,
+                onScanError
+            );
+        });
+    }
+}
+
+function onScanSuccess(decodedText) {
+    // Detener el escáner
+    if (App.qrScanner) {
+        App.qrScanner.stop();
+    }
+    
+    cerrarQrModal();
+    
+    // Buscar producto por ID (asumiendo que el QR contiene el ID del producto)
+    const producto = App.productos.find(p => p.id === decodedText);
+    
+    if (producto) {
+        mostrarProductoEscanear(producto);
+    } else {
+        // Si no encuentra por ID exacto, buscar por nombre o código
+        const productoAlternativo = App.productos.find(p => 
+            p.codigo === decodedText || 
+            p.nombre.toLowerCase().includes(decodedText.toLowerCase())
+        );
+        
+        if (productoAlternativo) {
+            mostrarProductoEscanear(productoAlternativo);
+        } else {
+            mostrarNotificacion('❌ Producto no encontrado');
+        }
+    }
+}
+
+function onScanError(error) {
+    console.warn('Error de escaneo:', error);
+}
+
+function mostrarProductoEscanear(producto) {
+    App.productoEscanearTemp = producto;
+    App.cantidadEscanearTemp = 1;
+    
+    DOM.productoEscanearModal.classList.add('active');
+    
+    let stockClass = 'stock-normal';
+    let stockText = `Stock: ${producto.stock}`;
+    
+    if (producto.stock === 0) {
+        stockClass = 'stock-agotado';
+        stockText = '❌ Agotado';
+    } else if (producto.stock < 5) {
+        stockClass = 'stock-bajo';
+        stockText = `⚠️ Últimos ${producto.stock}`;
+    }
+    
+    DOM.productoEscanearBody.innerHTML = `
+        <div style="text-align: center; margin-bottom: 1rem;">
+            <div style="font-size: 4rem;">📦</div>
+        </div>
+        
+        <div style="margin-bottom: 1rem;">
+            <h3>${producto.nombre}</h3>
+            <p style="color: #666;">${producto.categoria_nombre || 'Sin categoría'}</p>
+            <p style="font-size: 1.8rem; color: var(--primary-color); font-weight: bold;">$${producto.precio.toFixed(2)}</p>
+            <p class="${stockClass}">${stockText}</p>
+        </div>
+        
+        <div style="margin-bottom: 1.5rem;">
+            <label style="display: block; margin-bottom: 0.5rem; font-weight: bold;">Cantidad:</label>
+            <div style="display: flex; align-items: center; justify-content: center; gap: 1rem;">
+                <button id="btnRestar" class="cantidad-btn" style="width: 40px; height: 40px; font-size: 1.2rem;">-</button>
+                <span id="cantidadDisplay" style="font-size: 1.5rem; font-weight: bold; min-width: 50px; text-align: center;">1</span>
+                <button id="btnSumar" class="cantidad-btn" style="width: 40px; height: 40px; font-size: 1.2rem;">+</button>
+            </div>
+        </div>
+        
+        <div style="display: flex; gap: 1rem;">
+            <button id="btnCancelar" style="flex: 1; padding: 1rem; background: #e74c3c; color: white; border: none; border-radius: 8px; font-size: 1rem;">
+                ✖ Cancelar
+            </button>
+            <button id="btnAgregarCarrito" style="flex: 1; padding: 1rem; background: var(--success-color); color: white; border: none; border-radius: 8px; font-size: 1rem;">
+                🛒 Agregar ${App.cantidadEscanearTemp}
+            </button>
+        </div>
+    `;
+    
+    // Configurar eventos
+    document.getElementById('btnRestar')?.addEventListener('click', () => {
+        if (App.cantidadEscanearTemp > 1) {
+            App.cantidadEscanearTemp--;
+            document.getElementById('cantidadDisplay').textContent = App.cantidadEscanearTemp;
+            document.getElementById('btnAgregarCarrito').innerHTML = `🛒 Agregar ${App.cantidadEscanearTemp}`;
+        }
+    });
+    
+    document.getElementById('btnSumar')?.addEventListener('click', () => {
+        if (App.cantidadEscanearTemp < producto.stock) {
+            App.cantidadEscanearTemp++;
+            document.getElementById('cantidadDisplay').textContent = App.cantidadEscanearTemp;
+            document.getElementById('btnAgregarCarrito').innerHTML = `🛒 Agregar ${App.cantidadEscanearTemp}`;
+        } else {
+            mostrarNotificacion('❌ Stock máximo alcanzado');
+        }
+    });
+    
+    document.getElementById('btnAgregarCarrito')?.addEventListener('click', () => {
+        if (agregarAlCarrito(producto.id, App.cantidadEscanearTemp)) {
+            cerrarProductoEscanearModal();
+        }
+    });
+    
+    document.getElementById('btnCancelar')?.addEventListener('click', () => {
+        cerrarProductoEscanearModal();
+    });
+}
+
+function cerrarQrModal() {
+    DOM.qrModal.classList.remove('active');
+    
+    if (App.qrScanner) {
+        App.qrScanner.stop();
+        App.qrScanner = null;
+    }
+}
+
+function cerrarProductoEscanearModal() {
+    DOM.productoEscanearModal.classList.remove('active');
+    App.productoEscanearTemp = null;
+    App.cantidadEscanearTemp = 1;
 }
 
 // ===== CONEXIÓN =====
@@ -658,7 +908,17 @@ function setupEventListeners() {
 }
 
 function configurarEventosPagina(pagina) {
-    // Eventos específicos por página si son necesarios
+    if (pagina === 'escanear') {
+        setTimeout(() => {
+            document.getElementById('btnCamara')?.addEventListener('click', () => {
+                iniciarEscaner();
+            });
+            
+            document.getElementById('btnArchivo')?.addEventListener('click', () => {
+                iniciarEscanerArchivo();
+            });
+        }, 100);
+    }
 }
 
 // ===== MENÚ LATERAL (placeholder) =====
@@ -697,9 +957,13 @@ window.addEventListener('appinstalled', () => {
 window.mostrarPagina = mostrarPagina;
 window.verProducto = verProducto;
 window.cerrarModal = cerrarModal;
+window.cerrarQrModal = cerrarQrModal;
+window.cerrarProductoEscanearModal = cerrarProductoEscanearModal;
 window.toggleFavorito = toggleFavorito;
 window.agregarAlCarrito = agregarAlCarrito;
 window.modificarCantidad = modificarCantidad;
 window.eliminarDelCarrito = eliminarDelCarrito;
 window.completarCompra = completarCompra;
 window.filtrarPorCategoria = filtrarPorCategoria;
+window.iniciarEscaner = iniciarEscaner;
+window.iniciarEscanerArchivo = iniciarEscanerArchivo;
