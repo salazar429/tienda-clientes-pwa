@@ -1,5 +1,5 @@
 // ===========================================
-// APP TIENDA CLIENTES - VERSIÓN COMPLETA CORREGIDA
+// APP TIENDA CLIENTES - VERSIÓN CORREGIDA
 // ===========================================
 
 const API_URL = 'https://sistema-test-api.onrender.com';
@@ -307,14 +307,15 @@ function generarCarrito() {
         `;
     }
     
-    let total = 0;
+    let subtotal = 0;
     let html = '<div class="page active"><h2 class="page-title">🛒 Mi Carrito</h2>';
     
     App.carrito.forEach(item => {
         const producto = App.productos.find(p => p.id === item.id);
         if (!producto) return;
         
-        total += producto.precio * item.cantidad;
+        const itemTotal = producto.precio * item.cantidad;
+        subtotal += itemTotal;
         
         html += `
             <div class="carrito-item">
@@ -328,17 +329,50 @@ function generarCarrito() {
                     <span>${item.cantidad}</span>
                     <button class="cantidad-btn" onclick="modificarCantidad('${item.id}', 1)">+</button>
                 </div>
-                <button class="btn-eliminar" onclick="eliminarDelCarrito('${item.id}')">✖</button>
+                <div style="font-weight: bold; color: var(--primary-color);">
+                    $${itemTotal.toFixed(2)}
+                </div>
+                <button class="btn-eliminar" onclick="eliminarDelCarrito('${item.id}')" style="background: none; border: none; font-size: 1.2rem; cursor: pointer; color: var(--danger-color);">✖</button>
             </div>
         `;
     });
     
+    const impuesto = subtotal * 0.16; // 16% de impuesto
+    const envio = subtotal > 500 ? 0 : 50; // Envío gratis en compras mayores a $500
+    const total = subtotal + impuesto + envio;
+    
     html += `
-        <div class="carrito-total">
-            Total: $${total.toFixed(2)}
+        <div class="carrito-resumen" style="background: white; border-radius: var(--border-radius); padding: 1rem; margin-top: 1rem; box-shadow: var(--box-shadow);">
+            <h3 style="margin-bottom: 1rem; color: var(--dark-color);">Resumen de compra</h3>
+            
+            <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; padding-bottom: 0.5rem; border-bottom: 1px dashed #ddd;">
+                <span>Subtotal:</span>
+                <span>$${subtotal.toFixed(2)}</span>
+            </div>
+            
+            <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; padding-bottom: 0.5rem; border-bottom: 1px dashed #ddd;">
+                <span>Impuestos (16%):</span>
+                <span>$${impuesto.toFixed(2)}</span>
+            </div>
+            
+            <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; padding-bottom: 0.5rem; border-bottom: 1px dashed #ddd;">
+                <span>Envío:</span>
+                <span>${envio === 0 ? '🚚 GRATIS' : '$' + envio.toFixed(2)}</span>
+            </div>
+            
+            <div style="display: flex; justify-content: space-between; margin-top: 1rem; font-size: 1.3rem; font-weight: bold; color: var(--primary-color);">
+                <span>TOTAL:</span>
+                <span>$${total.toFixed(2)}</span>
+            </div>
+            
+            <div style="margin-top: 1rem; font-size: 0.8rem; color: #666; text-align: center;">
+                <p>💳 Aceptamos todas las tarjetas</p>
+                <p>🔒 Compra 100% segura</p>
+            </div>
         </div>
-        <button class="btn-comprar" onclick="completarCompra()">
-            ✅ Completar Compra
+        
+        <button class="btn-comprar" onclick="completarCompra()" style="width: 100%; padding: 1rem; background: var(--success-color); color: white; border: none; border-radius: var(--border-radius); font-size: 1.1rem; font-weight: bold; margin-top: 1rem; cursor: pointer;">
+            ✅ COMPLETAR COMPRA
         </button>
     </div>
     `;
@@ -360,19 +394,89 @@ function generarHistorial() {
     
     let html = '<div class="page active"><h2 class="page-title">📋 Historial de Compras</h2>';
     
-    App.historial.forEach(compra => {
+    App.historial.forEach((compra, index) => {
+        const fecha = new Date(compra.fecha);
+        const fechaFormateada = fecha.toLocaleDateString('es-ES', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+        
         html += `
-            <div class="historial-item">
-                <div class="historial-header">
-                    <span class="historial-fecha">${new Date(compra.fecha).toLocaleDateString()}</span>
-                    <span class="historial-total">$${compra.total.toFixed(2)}</span>
+            <div class="vale-compra" style="background: white; border-radius: var(--border-radius); margin-bottom: 1.5rem; box-shadow: 0 4px 15px rgba(0,0,0,0.1); overflow: hidden;">
+                
+                <!-- Cabecera del vale -->
+                <div style="background: linear-gradient(135deg, var(--primary-color), var(--secondary-color)); color: white; padding: 1rem; text-align: center;">
+                    <div style="font-size: 2rem; margin-bottom: 0.5rem;">🧾</div>
+                    <h3 style="margin: 0; font-size: 1.2rem;">TICKET DE COMPRA</h3>
+                    <p style="margin: 0.3rem 0 0; font-size: 0.8rem; opacity: 0.9;">#${compra.id.slice(-8)}</p>
                 </div>
-                ${compra.productos.map(p => `
-                    <div class="historial-producto">
-                        <span>${p.nombre} x${p.cantidad}</span>
-                        <span>$${(p.precio * p.cantidad).toFixed(2)}</span>
+                
+                <!-- Información de la tienda -->
+                <div style="padding: 1rem; border-bottom: 2px dashed #ddd; text-align: center;">
+                    <div style="font-weight: bold; color: var(--dark-color);">🛍️ MI TIENDA</div>
+                    <div style="font-size: 0.8rem; color: #666;">Tienda online de confianza</div>
+                    <div style="font-size: 0.8rem; color: #666;">RIF: J-12345678-9</div>
+                </div>
+                
+                <!-- Fecha y folio -->
+                <div style="padding: 0.8rem; background: #f8f9fa; display: flex; justify-content: space-between; font-size: 0.8rem; border-bottom: 1px solid #eee;">
+                    <span>📅 ${fechaFormateada}</span>
+                    <span>🔢 Folio: ${compra.id.slice(0,8)}</span>
+                </div>
+                
+                <!-- Detalle de productos -->
+                <div style="padding: 1rem;">
+                    <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+                        <thead>
+                            <tr style="border-bottom: 2px solid #eee;">
+                                <th style="text-align: left; padding-bottom: 0.5rem;">Producto</th>
+                                <th style="text-align: center; padding-bottom: 0.5rem;">Cant.</th>
+                                <th style="text-align: right; padding-bottom: 0.5rem;">Precio</th>
+                                <th style="text-align: right; padding-bottom: 0.5rem;">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${compra.productos.map(p => `
+                                <tr style="border-bottom: 1px solid #f0f0f0;">
+                                    <td style="padding: 0.5rem 0;">${p.nombre}</td>
+                                    <td style="text-align: center; padding: 0.5rem 0;">${p.cantidad}</td>
+                                    <td style="text-align: right; padding: 0.5rem 0;">$${p.precio.toFixed(2)}</td>
+                                    <td style="text-align: right; padding: 0.5rem 0; font-weight: bold;">$${(p.precio * p.cantidad).toFixed(2)}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                    
+                    <!-- Totales -->
+                    <div style="margin-top: 1rem; border-top: 2px solid #eee; padding-top: 1rem;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.3rem;">
+                            <span>Subtotal:</span>
+                            <span>$${(compra.total / 1.16).toFixed(2)}</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.3rem;">
+                            <span>IVA (16%):</span>
+                            <span>$${(compra.total - (compra.total / 1.16)).toFixed(2)}</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; margin-top: 0.5rem; font-size: 1.2rem; font-weight: bold; color: var(--primary-color);">
+                            <span>TOTAL:</span>
+                            <span>$${compra.total.toFixed(2)}</span>
+                        </div>
                     </div>
-                `).join('')}
+                    
+                    <!-- Método de pago -->
+                    <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px dashed #ddd; text-align: center; color: #666; font-size: 0.8rem;">
+                        💳 Pagado con: Tarjeta de crédito<br>
+                        ✅ ¡Gracias por tu compra!
+                    </div>
+                </div>
+                
+                <!-- Código de barras falso -->
+                <div style="padding: 1rem; background: #f8f9fa; text-align: center; font-family: monospace; letter-spacing: 5px; font-size: 1.2rem;">
+                    ${'▌'.repeat(20)}
+                </div>
             </div>
         `;
     });
@@ -631,10 +735,15 @@ function completarCompra() {
         }
     }
     
-    const total = App.carrito.reduce((sum, item) => {
+    // Calcular total con impuestos y envío
+    const subtotal = App.carrito.reduce((sum, item) => {
         const producto = App.productos.find(p => p.id === item.id);
         return sum + (producto ? producto.precio * item.cantidad : 0);
     }, 0);
+    
+    const impuesto = subtotal * 0.16;
+    const envio = subtotal > 500 ? 0 : 50;
+    const total = subtotal + impuesto + envio;
     
     const compra = {
         id: Date.now().toString(),
@@ -648,6 +757,9 @@ function completarCompra() {
                 cantidad: item.cantidad
             };
         }),
+        subtotal: subtotal,
+        impuesto: impuesto,
+        envio: envio,
         total: total
     };
     
@@ -659,7 +771,14 @@ function completarCompra() {
     
     actualizarBadgeCarrito();
     mostrarPagina('historial');
-    mostrarNotificacion('✅ ¡Compra completada con éxito!');
+    
+    // Notificación mejorada
+    mostrarNotificacion('✅ ¡COMPRA REALIZADA CON ÉXITO! 🎉');
+    
+    // Mostrar notificación emergente adicional
+    setTimeout(() => {
+        alert('🎉 ¡Compra realizada con éxito!\n\nGracias por tu compra. Puedes ver el detalle en el historial.');
+    }, 500);
 }
 
 function actualizarBadgeCarrito() {
@@ -907,17 +1026,17 @@ function mostrarProductoEscanear(producto) {
         <div style="margin-bottom: 1.5rem;">
             <label style="display: block; margin-bottom: 0.5rem; font-weight: bold;">Cantidad:</label>
             <div style="display: flex; align-items: center; justify-content: center; gap: 1rem;">
-                <button id="btnRestar" class="cantidad-btn" style="width: 40px; height: 40px; font-size: 1.2rem;">-</button>
+                <button id="btnRestar" class="cantidad-btn" style="width: 40px; height: 40px; font-size: 1.2rem; background: var(--primary-color); color: white; border: none; border-radius: 50%; cursor: pointer;">-</button>
                 <span id="cantidadDisplay" style="font-size: 1.5rem; font-weight: bold; min-width: 50px; text-align: center;">1</span>
-                <button id="btnSumar" class="cantidad-btn" style="width: 40px; height: 40px; font-size: 1.2rem;">+</button>
+                <button id="btnSumar" class="cantidad-btn" style="width: 40px; height: 40px; font-size: 1.2rem; background: var(--primary-color); color: white; border: none; border-radius: 50%; cursor: pointer;">+</button>
             </div>
         </div>
         
         <div style="display: flex; gap: 1rem;">
-            <button id="btnCancelar" style="flex: 1; padding: 1rem; background: #e74c3c; color: white; border: none; border-radius: 8px; font-size: 1rem;">
+            <button id="btnCancelar" style="flex: 1; padding: 1rem; background: #e74c3c; color: white; border: none; border-radius: 8px; font-size: 1rem; cursor: pointer;">
                 ✖ Cancelar
             </button>
-            <button id="btnAgregarCarrito" style="flex: 1; padding: 1rem; background: var(--success-color); color: white; border: none; border-radius: 8px; font-size: 1rem;">
+            <button id="btnAgregarCarrito" style="flex: 1; padding: 1rem; background: var(--success-color); color: white; border: none; border-radius: 8px; font-size: 1rem; cursor: pointer;">
                 🛒 Agregar ${App.cantidadEscanearTemp}
             </button>
         </div>
