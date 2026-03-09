@@ -16,8 +16,8 @@
     <!-- CSS -->
     <link rel="stylesheet" href="styles.css">
     
-    <!-- HTML5 QR Scanner -->
-    <script src="https://unpkg.com/html5-qrcode/minified/html5-qrcode.min.js"></script>
+    <!-- jsQR para mejor detección -->
+    <script src="https://unpkg.com/jsqr@1.4.0/dist/jsQR.js"></script>
 </head>
 <body>
     <!-- Splash Screen -->
@@ -110,20 +110,7 @@
         </div>
     </div>
     
-    <!-- Modal para escaneo QR -->
-    <div id="qrModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>📷 Escanear Código QR</h2>
-                <button class="close-modal" onclick="cerrarQrModal()">✖</button>
-            </div>
-            <div class="modal-body" id="qrModalBody">
-                <!-- Contenido dinámico del escáner -->
-            </div>
-        </div>
-    </div>
-    
-    <!-- Modal para confirmar producto escaneado -->
+    <!-- Modal para producto escaneado -->
     <div id="productoEscanearModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
