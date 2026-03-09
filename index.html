@@ -15,6 +15,9 @@
     
     <!-- CSS -->
     <link rel="stylesheet" href="styles.css">
+    
+    <!-- HTML5 QR Scanner -->
+    <script src="https://unpkg.com/html5-qrcode/minified/html5-qrcode.min.js"></script>
 </head>
 <body>
     <!-- Splash Screen -->
@@ -56,9 +59,9 @@
     <!-- Menú inferior equilibrado (5 opciones) -->
     <nav class="bottom-nav">
         <!-- Izquierda -->
-        <a href="#" class="nav-item" data-page="categorias">
-            <span class="nav-icon">🏷️</span>
-            <span class="nav-label">Categorías</span>
+        <a href="#" class="nav-item" data-page="escanear">
+            <span class="nav-icon">📷</span>
+            <span class="nav-label">Escanear</span>
         </a>
         
         <a href="#" class="nav-item" data-page="favoritos">
@@ -102,6 +105,32 @@
                 <button class="close-modal" onclick="cerrarModal()">✖</button>
             </div>
             <div class="modal-body" id="modalProductoBody">
+                <!-- Contenido dinámico -->
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal para escaneo QR -->
+    <div id="qrModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>📷 Escanear Código QR</h2>
+                <button class="close-modal" onclick="cerrarQrModal()">✖</button>
+            </div>
+            <div class="modal-body" id="qrModalBody">
+                <!-- Contenido dinámico del escáner -->
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal para confirmar producto escaneado -->
+    <div id="productoEscanearModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>📦 Producto Escaneado</h2>
+                <button class="close-modal" onclick="cerrarProductoEscanearModal()">✖</button>
+            </div>
+            <div class="modal-body" id="productoEscanearBody">
                 <!-- Contenido dinámico -->
             </div>
         </div>
