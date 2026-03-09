@@ -819,3 +819,55 @@ header {
     border-color: var(--primary-color);
     }
 
+/* Agregar estos estilos para el escáner */
+
+.btn-camara {
+    transition: all 0.3s ease;
+}
+
+.btn-camara:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+.btn-archivo, .btn-detener {
+    transition: all 0.3s ease;
+}
+
+.btn-archivo:hover, .btn-detener:hover {
+    transform: scale(0.98);
+    opacity: 0.9;
+}
+
+#video-container {
+    animation: fadeIn 0.5s ease;
+}
+
+#video {
+    transition: all 0.3s ease;
+}
+
+.estado {
+    transition: all 0.3s ease;
+}
+
+/* Estilos para el modal de producto escaneado */
+#productoEscanearBody .cantidad-btn {
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    font-size: 1.2rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+#productoEscanearBody .cantidad-btn:hover {
+    transform: scale(1.1);
+}
+
+#productoEscanearBody .cantidad-btn:active {
+    transform: scale(0.95);
+}
