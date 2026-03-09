@@ -1,5 +1,5 @@
 // ===========================================
-// APP TIENDA CLIENTES - VERSIÓN CORREGIDA
+// APP TIENDA CLIENTES - VERSIÓN FINAL CORREGIDA
 // ===========================================
 
 const API_URL = 'https://sistema-test-api.onrender.com';
@@ -22,7 +22,8 @@ const App = {
         stream: null
     },
     productoEscanearTemp: null,
-    cantidadEscanearTemp: 1
+    cantidadEscanearTemp: 1,
+    compraExitosa: false
 };
 
 // Elementos del DOM
@@ -101,6 +102,7 @@ function registerServiceWorker() {
 // ===== NAVEGACIÓN =====
 function mostrarPagina(pagina) {
     App.currentPage = pagina;
+    App.compraExitosa = false; // Resetear bandera al cambiar de página
     
     // Actualizar clases activas en menú
     document.querySelectorAll('.nav-item').forEach(item => {
@@ -296,6 +298,23 @@ function generarFavoritos() {
 }
 
 function generarCarrito() {
+    // Si hay una compra exitosa, mostrar mensaje de éxito
+    if (App.compraExitosa) {
+        return `
+            <div class="page active">
+                <div style="text-align: center; padding: 3rem 1rem;">
+                    <div style="font-size: 5rem; margin-bottom: 1rem; animation: bounce 0.5s ease;">🎉</div>
+                    <h2 style="color: var(--success-color); margin-bottom: 1rem;">¡COMPRA REALIZADA CON ÉXITO!</h2>
+                    <p style="color: #666; margin-bottom: 2rem;">Gracias por tu compra. Puedes ver el detalle en el historial.</p>
+                    <button onclick="mostrarPagina('historial')" style="background: var(--primary-color); color: white; border: none; padding: 1rem 2rem; border-radius: 50px; font-size: 1.1rem; cursor: pointer;">
+                        📋 Ver Historial
+                    </button>
+                </div>
+            </div>
+        `;
+    }
+    
+    // Si el carrito está vacío
     if (App.carrito.length === 0) {
         return `
             <div class="page active">
@@ -307,7 +326,7 @@ function generarCarrito() {
         `;
     }
     
-    let subtotal = 0;
+    let total = 0;
     let html = '<div class="page active"><h2 class="page-title">🛒 Mi Carrito</h2>';
     
     App.carrito.forEach(item => {
@@ -315,7 +334,7 @@ function generarCarrito() {
         if (!producto) return;
         
         const itemTotal = producto.precio * item.cantidad;
-        subtotal += itemTotal;
+        total += itemTotal;
         
         html += `
             <div class="carrito-item">
@@ -337,38 +356,9 @@ function generarCarrito() {
         `;
     });
     
-    const impuesto = subtotal * 0.16; // 16% de impuesto
-    const envio = subtotal > 500 ? 0 : 50; // Envío gratis en compras mayores a $500
-    const total = subtotal + impuesto + envio;
-    
     html += `
-        <div class="carrito-resumen" style="background: white; border-radius: var(--border-radius); padding: 1rem; margin-top: 1rem; box-shadow: var(--box-shadow);">
-            <h3 style="margin-bottom: 1rem; color: var(--dark-color);">Resumen de compra</h3>
-            
-            <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; padding-bottom: 0.5rem; border-bottom: 1px dashed #ddd;">
-                <span>Subtotal:</span>
-                <span>$${subtotal.toFixed(2)}</span>
-            </div>
-            
-            <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; padding-bottom: 0.5rem; border-bottom: 1px dashed #ddd;">
-                <span>Impuestos (16%):</span>
-                <span>$${impuesto.toFixed(2)}</span>
-            </div>
-            
-            <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; padding-bottom: 0.5rem; border-bottom: 1px dashed #ddd;">
-                <span>Envío:</span>
-                <span>${envio === 0 ? '🚚 GRATIS' : '$' + envio.toFixed(2)}</span>
-            </div>
-            
-            <div style="display: flex; justify-content: space-between; margin-top: 1rem; font-size: 1.3rem; font-weight: bold; color: var(--primary-color);">
-                <span>TOTAL:</span>
-                <span>$${total.toFixed(2)}</span>
-            </div>
-            
-            <div style="margin-top: 1rem; font-size: 0.8rem; color: #666; text-align: center;">
-                <p>💳 Aceptamos todas las tarjetas</p>
-                <p>🔒 Compra 100% segura</p>
-            </div>
+        <div class="carrito-total" style="background: white; border-radius: var(--border-radius); padding: 1rem; margin-top: 1rem; text-align: right; font-size: 1.3rem; font-weight: bold; box-shadow: var(--box-shadow);">
+            Total: $${total.toFixed(2)}
         </div>
         
         <button class="btn-comprar" onclick="completarCompra()" style="width: 100%; padding: 1rem; background: var(--success-color); color: white; border: none; border-radius: var(--border-radius); font-size: 1.1rem; font-weight: bold; margin-top: 1rem; cursor: pointer;">
@@ -405,7 +395,7 @@ function generarHistorial() {
         });
         
         html += `
-            <div class="vale-compra" style="background: white; border-radius: var(--border-radius); margin-bottom: 1.5rem; box-shadow: 0 4px 15px rgba(0,0,0,0.1); overflow: hidden;">
+            <div class="vale-compra" style="background: white; border-radius: var(--border-radius); margin-bottom: 1.5rem; box-shadow: 0 4px 15px rgba(0,0,0,0.1); overflow: hidden; border: 1px solid #eee;">
                 
                 <!-- Cabecera del vale -->
                 <div style="background: linear-gradient(135deg, var(--primary-color), var(--secondary-color)); color: white; padding: 1rem; text-align: center;">
@@ -450,17 +440,9 @@ function generarHistorial() {
                         </tbody>
                     </table>
                     
-                    <!-- Totales -->
+                    <!-- Total -->
                     <div style="margin-top: 1rem; border-top: 2px solid #eee; padding-top: 1rem;">
-                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.3rem;">
-                            <span>Subtotal:</span>
-                            <span>$${(compra.total / 1.16).toFixed(2)}</span>
-                        </div>
-                        <div style="display: flex; justify-content: space-between; margin-bottom: 0.3rem;">
-                            <span>IVA (16%):</span>
-                            <span>$${(compra.total - (compra.total / 1.16)).toFixed(2)}</span>
-                        </div>
-                        <div style="display: flex; justify-content: space-between; margin-top: 0.5rem; font-size: 1.2rem; font-weight: bold; color: var(--primary-color);">
+                        <div style="display: flex; justify-content: space-between; font-size: 1.2rem; font-weight: bold; color: var(--primary-color);">
                             <span>TOTAL:</span>
                             <span>$${compra.total.toFixed(2)}</span>
                         </div>
@@ -735,16 +717,13 @@ function completarCompra() {
         }
     }
     
-    // Calcular total con impuestos y envío
-    const subtotal = App.carrito.reduce((sum, item) => {
+    // Calcular total
+    const total = App.carrito.reduce((sum, item) => {
         const producto = App.productos.find(p => p.id === item.id);
         return sum + (producto ? producto.precio * item.cantidad : 0);
     }, 0);
     
-    const impuesto = subtotal * 0.16;
-    const envio = subtotal > 500 ? 0 : 50;
-    const total = subtotal + impuesto + envio;
-    
+    // Crear registro de compra para el historial
     const compra = {
         id: Date.now().toString(),
         fecha: new Date().toISOString(),
@@ -757,28 +736,26 @@ function completarCompra() {
                 cantidad: item.cantidad
             };
         }),
-        subtotal: subtotal,
-        impuesto: impuesto,
-        envio: envio,
         total: total
     };
     
+    // Guardar en historial
     App.historial.unshift(compra);
-    App.carrito = [];
-    
     localStorage.setItem('historial', JSON.stringify(App.historial));
+    
+    // Vaciar carrito
+    App.carrito = [];
     localStorage.setItem('carrito', JSON.stringify(App.carrito));
     
+    // Actualizar badge
     actualizarBadgeCarrito();
-    mostrarPagina('historial');
     
-    // Notificación mejorada
-    mostrarNotificacion('✅ ¡COMPRA REALIZADA CON ÉXITO! 🎉');
+    // Marcar compra exitosa y mostrar mensaje en la página de carrito
+    App.compraExitosa = true;
+    mostrarPagina('carrito');
     
-    // Mostrar notificación emergente adicional
-    setTimeout(() => {
-        alert('🎉 ¡Compra realizada con éxito!\n\nGracias por tu compra. Puedes ver el detalle en el historial.');
-    }, 500);
+    // Mostrar notificación de éxito
+    mostrarNotificacion('✅ ¡COMPRA REALIZADA CON ÉXITO!');
 }
 
 function actualizarBadgeCarrito() {
@@ -787,7 +764,7 @@ function actualizarBadgeCarrito() {
     DOM.cartBadge.style.display = totalItems > 0 ? 'flex' : 'none';
 }
 
-// ===== FUNCIONES DE ESCÁNER QR MEJORADAS =====
+// ===== FUNCIONES DE ESCÁNER QR =====
 function iniciarEscaner() {
     const btn = document.getElementById('btnAbrirCamara');
     const estado = document.getElementById('estadoEscaner');
