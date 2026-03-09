@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Tienda - Productos</title>
+    <title>Tienda - Mi Tienda</title>
     
     <!-- PWA Manifest -->
     <link rel="manifest" href="manifest.json">
     
     <!-- Meta tags para PWA -->
-    <meta name="theme-color" content="#3498db">
+    <meta name="theme-color" content="#8e44ad">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     
@@ -17,41 +17,95 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <!-- Splash Screen simple -->
+    <!-- Splash Screen -->
     <div id="splash" class="splash">
         <div class="splash-content">
-            <h1>🛍️ Tienda</h1>
-            <p>Cargando productos...</p>
+            <div class="splash-icon">🛍️</div>
+            <h1>Mi Tienda</h1>
+            <p>Cargando tu experiencia de compra...</p>
+            <div class="splash-spinner"></div>
         </div>
     </div>
 
     <!-- Header -->
     <header>
         <div class="header-container">
-            <h1>🛍️ Tienda</h1>
-            <div id="connection-status" class="connection-status online">📶</div>
+            <div class="header-left">
+                <button id="menuBtn" class="icon-btn">☰</button>
+            </div>
+            <div class="header-title">
+                <h1>🛍️ Mi Tienda</h1>
+            </div>
+            <div class="header-right">
+                <span id="connection-status" class="connection-status online">📶</span>
+            </div>
+        </div>
+        
+        <!-- Barra de búsqueda (visible en todas las páginas) -->
+        <div class="search-bar" id="searchBar">
+            <input type="text" id="searchInput" placeholder="Buscar productos..." class="search-input">
+            <button id="searchBtn" class="search-btn">🔍</button>
         </div>
     </header>
 
-    <!-- Barra de búsqueda -->
-    <div class="search-bar">
-        <input type="text" id="searchInput" placeholder="Buscar productos..." class="search-input">
-    </div>
-
-    <!-- Contenedor de productos -->
-    <main>
-        <div id="productos-container" class="productos-grid">
-            <!-- Los productos se cargarán aquí -->
-        </div>
+    <!-- Contenido principal -->
+    <main id="mainContent">
+        <!-- Las páginas se cargarán aquí dinámicamente -->
     </main>
+
+    <!-- Menú inferior equilibrado (5 opciones) -->
+    <nav class="bottom-nav">
+        <!-- Izquierda -->
+        <a href="#" class="nav-item" data-page="categorias">
+            <span class="nav-icon">🏷️</span>
+            <span class="nav-label">Categorías</span>
+        </a>
+        
+        <a href="#" class="nav-item" data-page="favoritos">
+            <span class="nav-icon">❤️</span>
+            <span class="nav-label">Favoritos</span>
+        </a>
+        
+        <!-- Centro - DASHBOARD (destacado) -->
+        <a href="#" class="nav-item active" data-page="dashboard">
+            <span class="nav-icon nav-icon-center">🏠</span>
+            <span class="nav-label">Inicio</span>
+        </a>
+        
+        <!-- Derecha -->
+        <a href="#" class="nav-item" data-page="carrito">
+            <span class="nav-icon">🛒</span>
+            <span class="nav-label">Carrito</span>
+            <span id="cartBadge" class="badge">0</span>
+        </a>
+        
+        <a href="#" class="nav-item" data-page="historial">
+            <span class="nav-icon">📋</span>
+            <span class="nav-label">Historial</span>
+        </a>
+    </nav>
 
     <!-- Botón de instalar PWA -->
     <button id="install-button" class="install-button" style="display: none;">
-        📲 Instalar App
+        <span class="install-icon">📲</span>
+        <span class="install-text">INSTALAR APP</span>
     </button>
 
     <!-- Notificaciones -->
     <div id="notification" class="notification"></div>
+
+    <!-- Modales -->
+    <div id="productoModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalProductoNombre"></h2>
+                <button class="close-modal" onclick="cerrarModal()">✖</button>
+            </div>
+            <div class="modal-body" id="modalProductoBody">
+                <!-- Contenido dinámico -->
+            </div>
+        </div>
+    </div>
 
     <script src="app.js"></script>
 </body>
