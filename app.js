@@ -14,7 +14,13 @@ const App = {
     currentPage: 'dashboard',
     online: navigator.onLine,
     installPrompt: null,
-    qrScanner: null,
+    qrScanner: {
+        video: null,
+        canvas: null,
+        context: null,
+        scanning: false,
+        stream: null
+    },
     productoEscanearTemp: null,
     cantidadEscanearTemp: 1
 };
@@ -33,8 +39,6 @@ const DOM = {
     modalProductoNombre: document.getElementById('modalProductoNombre'),
     modalProductoBody: document.getElementById('modalProductoBody'),
     menuBtn: document.getElementById('menuBtn'),
-    qrModal: document.getElementById('qrModal'),
-    qrModalBody: document.getElementById('qrModalBody'),
     productoEscanearModal: document.getElementById('productoEscanearModal'),
     productoEscanearBody: document.getElementById('productoEscanearBody')
 };
@@ -196,18 +200,58 @@ function generarEscanear() {
             <div style="text-align: center; margin: 1rem 0;">
                 <p style="color: #666; margin-bottom: 1rem;">Escanea el código QR de un producto para agregarlo al carrito</p>
                 
-                <div style="display: flex; gap: 1rem; justify-content: center; margin-bottom: 2rem;">
-                    <button id="btnCamara" class="btn-accion" style="background: var(--primary-color); color: white; border: none; padding: 1rem; border-radius: 50px; font-size: 1rem; flex: 1; max-width: 200px;">
-                        📷 Usar Cámara
-                    </button>
+                <button id="btnAbrirCamara" class="btn-camara" style="background: linear-gradient(145deg, #4CAF50, #45a049); color: white; font-size: 24px; padding: 30px 20px; border: none; border-radius: 20px; cursor: pointer; width: 100%; margin: 20px 0; font-weight: bold; box-shadow: 0 10px 20px rgba(76, 175, 80, 0.3); display: flex; flex-direction: column; align-items: center; gap: 15px;">
+                    <span style="font-size: 48px;">📸</span>
+                    <span>ABRIR CÁMARA</span>
+                    <span style="font-size: 14px;">Haz clic aquí para activar la cámara</span>
+                </button>
+                
+                <div style="display: flex; gap: 1rem; justify-content: center; margin: 20px 0;">
+                    <label for="fileInput" class="btn btn-archivo" style="background-color: #2196F3; color: white; border: none; padding: 15px 25px; border-radius: 10px; cursor: pointer; font-size: 16px; font-weight: bold; flex: 1;">
+                        📁 Escanear desde archivo
+                    </label>
+                    <input type="file" id="fileInput" accept="image/*" style="display: none;">
                     
-                    <button id="btnArchivo" class="btn-accion" style="background: var(--secondary-color); color: white; border: none; padding: 1rem; border-radius: 50px; font-size: 1rem; flex: 1; max-width: 200px;">
-                        📁 Subir Imagen
+                    <button id="btnDetener" class="btn-detener" style="background-color: #f44336; color: white; border: none; padding: 15px 25px; border-radius: 10px; cursor: pointer; font-size: 16px; font-weight: bold; flex: 1; display: none;">
+                        ⏹️ Detener cámara
                     </button>
                 </div>
                 
-                <div id="qr-reader" style="width: 100%; max-width: 500px; margin: 0 auto; display: none;"></div>
-                <div id="qr-reader-results" style="margin-top: 1rem; color: #666;"></div>
+                <div id="video-container" style="width: 100%; max-width: 500px; margin: 20px auto; position: relative; display: none;">
+                    <video id="video" playsinline autoplay style="width: 100%; height: auto; border-radius: 10px; border: 3px solid #4CAF50; background-color: #000; transform: none;"></video>
+                    <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; border: 3px solid rgba(76, 175, 80, 0.8); border-radius: 10px; pointer-events: none; animation: pulse 1.5s infinite; box-shadow: 0 0 0 2px rgba(255,255,255,0.5) inset;"></div>
+                    <div style="text-align: center; margin-top: 10px; color: #4CAF50; font-weight: bold;">
+                        ⚡ Enfoca el código QR ⚡
+                    </div>
+                    <div id="orientacionInfo" style="background-color: #e3f2fd; padding: 10px; border-radius: 5px; margin-top: 10px; font-size: 14px; color: #1976D2; text-align: center; display: none;"></div>
+                </div>
+                
+                <div id="estadoEscaner" class="estado" style="text-align: center; padding: 20px; color: #666; background-color: #f9f9f9; border-radius: 10px; margin: 20px 0; border-left: 5px solid #2196F3; font-size: 18px;">
+                    👆 Haz clic en "ABRIR CÁMARA" para comenzar
+                </div>
+                
+                <style>
+                    @keyframes pulse {
+                        0% { border-color: rgba(76, 175, 80, 0.8); }
+                        50% { border-color: rgba(76, 175, 80, 1); }
+                        100% { border-color: rgba(76, 175, 80, 0.8); }
+                    }
+                    
+                    @keyframes spin {
+                        0% { transform: rotate(0deg); }
+                        100% { transform: rotate(360deg); }
+                    }
+                    
+                    .loading {
+                        display: inline-block;
+                        width: 30px;
+                        height: 30px;
+                        border: 5px solid #f3f3f3;
+                        border-top: 5px solid #4CAF50;
+                        border-radius: 50%;
+                        animation: spin 1s linear infinite;
+                    }
+                </style>
             </div>
         </div>
     `;
@@ -582,7 +626,7 @@ function completarCompra() {
     for (const item of App.carrito) {
         const producto = App.productos.find(p => p.id === item.id);
         if (!producto || producto.stock < item.cantidad) {
-            mostrarNotificacion(`❌ Stock insuficiente para ${producto.nombre}`);
+            mostrarNotificacion(`❌ Stock insuficiente para ${producto ? producto.nombre : 'producto'}`);
             return;
         }
     }
@@ -599,8 +643,8 @@ function completarCompra() {
             const producto = App.productos.find(p => p.id === item.id);
             return {
                 id: item.id,
-                nombre: producto.nombre,
-                precio: producto.precio,
+                nombre: producto ? producto.nombre : 'Producto',
+                precio: producto ? producto.precio : 0,
                 cantidad: item.cantidad
             };
         }),
@@ -624,125 +668,211 @@ function actualizarBadgeCarrito() {
     DOM.cartBadge.style.display = totalItems > 0 ? 'flex' : 'none';
 }
 
-// ===== FUNCIONES DE ESCÁNER QR =====
+// ===== FUNCIONES DE ESCÁNER QR MEJORADAS =====
 function iniciarEscaner() {
-    DOM.qrModal.classList.add('active');
+    const btn = document.getElementById('btnAbrirCamara');
+    const estado = document.getElementById('estadoEscaner');
+    const videoContainer = document.getElementById('video-container');
+    const orientacionInfo = document.getElementById('orientacionInfo');
+    const btnDetener = document.getElementById('btnDetener');
     
-    DOM.qrModalBody.innerHTML = `
-        <div style="text-align: center;">
-            <div id="qr-reader" style="width: 100%; max-width: 500px; margin: 0 auto;"></div>
-            <div id="qr-reader-results" style="margin-top: 1rem; color: #666;"></div>
-            
-            <div style="display: flex; gap: 1rem; justify-content: center; margin-top: 1rem;">
-                <button id="btnCambiarCamara" class="btn-accion" style="background: var(--primary-color); color: white; border: none; padding: 0.8rem; border-radius: 50px; font-size: 0.9rem; flex: 1;">
-                    🔄 Cambiar Cámara
-                </button>
-                
-                <button onclick="cerrarQrModal()" style="background: #e74c3c; color: white; border: none; padding: 0.8rem; border-radius: 50px; font-size: 0.9rem; flex: 1;">
-                    ✖ Cerrar
-                </button>
-            </div>
-        </div>
+    btn.disabled = true;
+    btn.innerHTML = `
+        <span class="loading"></span>
+        <span>ABRIENDO CÁMARA...</span>
     `;
     
-    const html5QrCode = new Html5Qrcode("qr-reader");
-    App.qrScanner = html5QrCode;
+    estado.innerHTML = '📸 Solicitando permiso de cámara...';
     
-    const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+    // Crear elementos para el escaneo
+    const video = document.getElementById('video');
+    const canvasElement = document.createElement('canvas');
+    const canvas = canvasElement.getContext('2d');
     
-    html5QrCode.start(
-        { facingMode: "environment" },
-        config,
-        onScanSuccess,
-        onScanError
-    );
+    App.qrScanner.video = video;
+    App.qrScanner.canvas = canvas;
+    App.qrScanner.canvasElement = canvasElement;
     
-    document.getElementById('btnCambiarCamara')?.addEventListener('click', () => {
-        cambiarCamara();
-    });
-}
-
-function iniciarEscanerArchivo() {
-    DOM.qrModal.classList.add('active');
-    
-    DOM.qrModalBody.innerHTML = `
-        <div style="text-align: center;">
-            <input type="file" id="qr-input-file" accept="image/*" style="margin-bottom: 1rem;">
-            <div id="qr-reader-results" style="margin-top: 1rem; color: #666;"></div>
-            
-            <button onclick="cerrarQrModal()" style="background: #e74c3c; color: white; border: none; padding: 0.8rem; border-radius: 50px; font-size: 0.9rem; width: 100%; margin-top: 1rem;">
-                ✖ Cerrar
-            </button>
-        </div>
-    `;
-    
-    document.getElementById('qr-input-file').addEventListener('change', (e) => {
-        if (e.target.files.length === 0) {
-            return;
-        }
+    // Intentar abrir cámara trasera
+    navigator.mediaDevices.getUserMedia({ 
+        video: { 
+            facingMode: { exact: "environment" },
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
+        } 
+    })
+    .then(stream => {
+        // Éxito con cámara trasera exacta
+        manejarStreamExitoso(stream, video, videoContainer, orientacionInfo, estado, btn, btnDetener);
+    })
+    .catch(err => {
+        console.log('Error con cámara trasera exacta, intentando sin exact:', err);
         
-        const file = e.target.files[0];
-        const html5QrCode = new Html5Qrcode("qr-reader");
-        
-        html5QrCode.scanFile(file, true)
-            .then(decodedText => {
-                onScanSuccess(decodedText);
-            })
-            .catch(err => {
-                document.getElementById('qr-reader-results').innerHTML = `
-                    <div style="color: #e74c3c;">
-                        ❌ Error al escanear: No se pudo leer el código QR
-                    </div>
-                `;
-            });
-    });
-}
-
-function cambiarCamara() {
-    if (App.qrScanner) {
-        App.qrScanner.stop().then(() => {
-            const newFacingMode = App.qrScanner._facingMode === 'environment' ? 'user' : 'environment';
-            
-            App.qrScanner.start(
-                { facingMode: newFacingMode },
-                { fps: 10, qrbox: { width: 250, height: 250 } },
-                onScanSuccess,
-                onScanError
-            );
+        // Intentar sin 'exact'
+        return navigator.mediaDevices.getUserMedia({ 
+            video: { 
+                facingMode: "environment",
+                width: { ideal: 1280 },
+                height: { ideal: 720 }
+            } 
         });
+    })
+    .then(stream => {
+        if (stream) {
+            manejarStreamExitoso(stream, video, videoContainer, orientacionInfo, estado, btn, btnDetener);
+        }
+    })
+    .catch(err => {
+        console.error('Error final:', err);
+        estado.innerHTML = '❌ Error: No se pudo acceder a la cámara trasera';
+        btn.disabled = false;
+        btn.innerHTML = `
+            <span style="font-size: 48px;">📸</span>
+            <span>ABRIR CÁMARA</span>
+            <span style="font-size: 14px;">Haz clic aquí para activar la cámara</span>
+        `;
+    });
+}
+
+function manejarStreamExitoso(stream, video, videoContainer, orientacionInfo, estado, btn, btnDetener) {
+    const videoTracks = stream.getVideoTracks();
+    if (videoTracks.length > 0) {
+        const track = videoTracks[0];
+        const settings = track.getSettings();
+        console.log('Cámara:', track.label);
+        console.log('Settings:', settings);
+        
+        orientacionInfo.style.display = 'block';
+        orientacionInfo.innerHTML = `📐 Usando: ${track.label || 'Cámara trasera'}<br>Orientación normal - sin espejo`;
+    }
+    
+    App.qrScanner.stream = stream;
+    video.srcObject = stream;
+    
+    video.onloadedmetadata = function() {
+        video.play();
+        video.style.transform = 'none';
+        videoContainer.style.display = 'block';
+        
+        estado.innerHTML = '🔍 Escaneando... Apunta el código QR hacia la cámara';
+        
+        btn.style.display = 'none';
+        btnDetener.style.display = 'block';
+        
+        App.qrScanner.scanning = true;
+        escanearQR();
+    };
+}
+
+function escanearQR() {
+    if (!App.qrScanner.scanning) return;
+    
+    const video = App.qrScanner.video;
+    const canvas = App.qrScanner.canvas;
+    const canvasElement = App.qrScanner.canvasElement;
+    
+    if (!video || !canvas) return;
+    
+    try {
+        if (video.readyState === video.HAVE_ENOUGH_DATA) {
+            canvasElement.height = video.videoHeight;
+            canvasElement.width = video.videoWidth;
+            
+            canvas.drawImage(video, 0, 0, canvasElement.width, canvasElement.height);
+            
+            const imageData = canvas.getImageData(0, 0, canvasElement.width, canvasElement.height);
+            const code = jsQR(imageData.data, imageData.width, imageData.height, {
+                inversionAttempts: "dontInvert",
+            });
+            
+            if (code) {
+                console.log('QR detectado:', code.data);
+                procesarResultadoQR(code.data);
+                
+                document.getElementById('estadoEscaner').innerHTML = '✅ ¡QR detectado!';
+                App.qrScanner.scanning = false;
+                
+                setTimeout(() => {
+                    detenerCamara();
+                }, 2000);
+            }
+        }
+    } catch (e) {
+        console.error('Error en escaneo:', e);
+    }
+    
+    if (App.qrScanner.scanning) {
+        requestAnimationFrame(escanearQR);
     }
 }
 
-function onScanSuccess(decodedText) {
-    // Detener el escáner
-    if (App.qrScanner) {
-        App.qrScanner.stop();
+function detenerCamara() {
+    if (App.qrScanner.stream) {
+        App.qrScanner.stream.getTracks().forEach(track => {
+            track.stop();
+        });
+        if (App.qrScanner.video) {
+            App.qrScanner.video.srcObject = null;
+        }
     }
     
-    cerrarQrModal();
+    document.getElementById('video-container').style.display = 'none';
+    document.getElementById('btnAbrirCamara').style.display = 'flex';
+    document.getElementById('btnDetener').style.display = 'none';
+    document.getElementById('estadoEscaner').innerHTML = '📸 Cámara detenida';
+    document.getElementById('orientacionInfo').style.display = 'none';
     
+    App.qrScanner.scanning = false;
+    App.qrScanner.stream = null;
+}
+
+function escanearArchivo(file) {
+    const reader = new FileReader();
+    reader.onload = function() {
+        const img = new Image();
+        img.src = reader.result;
+        img.onload = function() {
+            const canvas = document.createElement('canvas');
+            canvas.width = img.width;
+            canvas.height = img.height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0);
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const code = jsQR(imageData.data, imageData.width, imageData.height);
+            
+            if (code) {
+                procesarResultadoQR(code.data);
+                document.getElementById('estadoEscaner').innerHTML = '✅ QR escaneado desde archivo';
+            } else {
+                document.getElementById('estadoEscaner').innerHTML = '❌ No se encontró QR en la imagen';
+            }
+        };
+    };
+    reader.readAsDataURL(file);
+}
+
+function procesarResultadoQR(texto) {
     // Buscar producto por ID (asumiendo que el QR contiene el ID del producto)
-    const producto = App.productos.find(p => p.id === decodedText);
+    const producto = App.productos.find(p => p.id === texto);
     
     if (producto) {
         mostrarProductoEscanear(producto);
     } else {
         // Si no encuentra por ID exacto, buscar por nombre o código
         const productoAlternativo = App.productos.find(p => 
-            p.codigo === decodedText || 
-            p.nombre.toLowerCase().includes(decodedText.toLowerCase())
+            (p.codigo && p.codigo === texto) || 
+            (p.nombre && p.nombre.toLowerCase().includes(texto.toLowerCase()))
         );
         
         if (productoAlternativo) {
             mostrarProductoEscanear(productoAlternativo);
         } else {
             mostrarNotificacion('❌ Producto no encontrado');
+            
+            // Mostrar el texto escaneado por si acaso
+            document.getElementById('estadoEscaner').innerHTML = `QR detectado: ${texto}`;
         }
     }
-}
-
-function onScanError(error) {
-    console.warn('Error de escaneo:', error);
 }
 
 function mostrarProductoEscanear(producto) {
@@ -794,42 +924,35 @@ function mostrarProductoEscanear(producto) {
     `;
     
     // Configurar eventos
-    document.getElementById('btnRestar')?.addEventListener('click', () => {
-        if (App.cantidadEscanearTemp > 1) {
-            App.cantidadEscanearTemp--;
-            document.getElementById('cantidadDisplay').textContent = App.cantidadEscanearTemp;
-            document.getElementById('btnAgregarCarrito').innerHTML = `🛒 Agregar ${App.cantidadEscanearTemp}`;
-        }
-    });
-    
-    document.getElementById('btnSumar')?.addEventListener('click', () => {
-        if (App.cantidadEscanearTemp < producto.stock) {
-            App.cantidadEscanearTemp++;
-            document.getElementById('cantidadDisplay').textContent = App.cantidadEscanearTemp;
-            document.getElementById('btnAgregarCarrito').innerHTML = `🛒 Agregar ${App.cantidadEscanearTemp}`;
-        } else {
-            mostrarNotificacion('❌ Stock máximo alcanzado');
-        }
-    });
-    
-    document.getElementById('btnAgregarCarrito')?.addEventListener('click', () => {
-        if (agregarAlCarrito(producto.id, App.cantidadEscanearTemp)) {
+    setTimeout(() => {
+        document.getElementById('btnRestar')?.addEventListener('click', () => {
+            if (App.cantidadEscanearTemp > 1) {
+                App.cantidadEscanearTemp--;
+                document.getElementById('cantidadDisplay').textContent = App.cantidadEscanearTemp;
+                document.getElementById('btnAgregarCarrito').innerHTML = `🛒 Agregar ${App.cantidadEscanearTemp}`;
+            }
+        });
+        
+        document.getElementById('btnSumar')?.addEventListener('click', () => {
+            if (App.cantidadEscanearTemp < producto.stock) {
+                App.cantidadEscanearTemp++;
+                document.getElementById('cantidadDisplay').textContent = App.cantidadEscanearTemp;
+                document.getElementById('btnAgregarCarrito').innerHTML = `🛒 Agregar ${App.cantidadEscanearTemp}`;
+            } else {
+                mostrarNotificacion('❌ Stock máximo alcanzado');
+            }
+        });
+        
+        document.getElementById('btnAgregarCarrito')?.addEventListener('click', () => {
+            if (agregarAlCarrito(producto.id, App.cantidadEscanearTemp)) {
+                cerrarProductoEscanearModal();
+            }
+        });
+        
+        document.getElementById('btnCancelar')?.addEventListener('click', () => {
             cerrarProductoEscanearModal();
-        }
-    });
-    
-    document.getElementById('btnCancelar')?.addEventListener('click', () => {
-        cerrarProductoEscanearModal();
-    });
-}
-
-function cerrarQrModal() {
-    DOM.qrModal.classList.remove('active');
-    
-    if (App.qrScanner) {
-        App.qrScanner.stop();
-        App.qrScanner = null;
-    }
+        });
+    }, 100);
 }
 
 function cerrarProductoEscanearModal() {
@@ -905,17 +1028,36 @@ function setupEventListeners() {
     DOM.menuBtn.addEventListener('click', () => {
         mostrarMenuLateral();
     });
+    
+    // Limpiar al cerrar
+    window.addEventListener('beforeunload', function() {
+        if (App.qrScanner.stream) {
+            App.qrScanner.stream.getTracks().forEach(track => track.stop());
+        }
+    });
 }
 
 function configurarEventosPagina(pagina) {
     if (pagina === 'escanear') {
         setTimeout(() => {
-            document.getElementById('btnCamara')?.addEventListener('click', () => {
+            // Botón de cámara
+            document.getElementById('btnAbrirCamara')?.addEventListener('click', (e) => {
+                e.preventDefault();
                 iniciarEscaner();
             });
             
-            document.getElementById('btnArchivo')?.addEventListener('click', () => {
-                iniciarEscanerArchivo();
+            // Botón de archivo
+            document.getElementById('fileInput')?.addEventListener('change', function(e) {
+                const archivo = e.target.files[0];
+                if (archivo) {
+                    escanearArchivo(archivo);
+                }
+                this.value = '';
+            });
+            
+            // Botón detener
+            document.getElementById('btnDetener')?.addEventListener('click', () => {
+                detenerCamara();
             });
         }, 100);
     }
@@ -957,7 +1099,6 @@ window.addEventListener('appinstalled', () => {
 window.mostrarPagina = mostrarPagina;
 window.verProducto = verProducto;
 window.cerrarModal = cerrarModal;
-window.cerrarQrModal = cerrarQrModal;
 window.cerrarProductoEscanearModal = cerrarProductoEscanearModal;
 window.toggleFavorito = toggleFavorito;
 window.agregarAlCarrito = agregarAlCarrito;
@@ -965,5 +1106,3 @@ window.modificarCantidad = modificarCantidad;
 window.eliminarDelCarrito = eliminarDelCarrito;
 window.completarCompra = completarCompra;
 window.filtrarPorCategoria = filtrarPorCategoria;
-window.iniciarEscaner = iniciarEscaner;
-window.iniciarEscanerArchivo = iniciarEscanerArchivo;
