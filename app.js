@@ -1,7 +1,10 @@
 // ===========================================
 // APP TIENDA CLIENTES - VERSIÓN CON PAGOS Y PEDIDOS
 // ===========================================
+// Importar funciones del generador QR
+import { mostrarQRPago, descargarQRPago, cerrarModalQrPago } from './Generar_QR.js';
 
+//const API_URL = 'https://sistema-test-api.onrender.com';
 const API_URL = 'https://sistema-test-api.onrender.com';
 
 // Estado global de la aplicación
