@@ -709,6 +709,8 @@ function procesarEnvioACasa() {
 }
 
 // ===== MOSTRAR QR DE PAGO =====
+
+     // ===== MOSTRAR QR DE PAGO (VERSIÓN ACTUALIZADA) =====
 function mostrarQrPago() {
     if (App.carrito.length === 0) {
         mostrarNotificacion('❌ El carrito está vacío');
@@ -730,18 +732,18 @@ function mostrarQrPago() {
         return sum + (producto ? producto.precio * item.cantidad : 0);
     }, 0);
     
-    // Crear datos para el QR
+    // Crear datos completos para el QR
     const datosPago = {
         id: Date.now().toString(),
         fecha: new Date().toISOString(),
-        cliente: App.clienteActual,
+        cliente: { ...App.clienteActual },
         productos: App.carrito.map(item => {
             const producto = App.productos.find(p => p.id === item.id);
             return {
+                id: item.id,
                 nombre: producto ? producto.nombre : 'Producto',
                 precio: producto ? producto.precio : 0,
-                cantidad: item.cantidad,
-                total: producto ? producto.precio * item.cantidad : 0
+                cantidad: item.cantidad
             };
         }),
         total: total
@@ -750,57 +752,8 @@ function mostrarQrPago() {
     // Guardar el pedido temporalmente
     App.pedidoTemporal = datosPago;
     
-    // Mostrar modal con QR
-    const modal = document.createElement('div');
-    modal.className = 'modal active';
-    modal.id = 'qrPagoModal';
-    
-    // Generar contenido del QR (simulado)
-    const qrData = JSON.stringify(datosPago, null, 2);
-    
-    modal.innerHTML = `
-        <div class="modal-content" style="max-width: 500px;">
-            <div class="modal-header">
-                <h2>💳 Código QR de Pago</h2>
-                <button class="close-modal" onclick="cerrarModalQrPago()">✖</button>
-            </div>
-            <div class="modal-body" style="padding: 2rem 1rem; text-align: center;">
-                <div style="background: white; padding: 1rem; border-radius: var(--border-radius); margin-bottom: 1.5rem;">
-                    <div style="font-size: 0.9rem; color: #666; margin-bottom: 0.5rem;">Cliente: ${App.clienteActual.nombre}</div>
-                    <div style="font-size: 0.9rem; color: #666; margin-bottom: 1rem;">Total a pagar: <strong>$${total.toFixed(2)}</strong></div>
-                    
-                    <!-- Código QR simulado -->
-                    <div style="background: #000; width: 200px; height: 200px; margin: 0 auto 1rem; display: flex; align-items: center; justify-content: center; color: white; font-size: 0.8rem; border-radius: 10px;">
-                        <div style="text-align: center;">
-                            <div style="font-size: 2rem; margin-bottom: 0.5rem;">📱</div>
-                            <div>CÓDIGO QR</div>
-                            <div style="font-size: 0.6rem; margin-top: 0.5rem;">${datosPago.id.slice(-8)}</div>
-                        </div>
-                    </div>
-                    
-                    <div style="background: #f8f9fa; padding: 1rem; border-radius: 5px; text-align: left; font-size: 0.8rem; margin-bottom: 1rem;">
-                        <strong>Productos:</strong>
-                        ${datosPago.productos.map(p => `
-                            <div style="display: flex; justify-content: space-between; margin-top: 0.3rem;">
-                                <span>${p.nombre} x${p.cantidad}</span>
-                                <span>$${p.total.toFixed(2)}</span>
-                            </div>
-                        `).join('')}
-                    </div>
-                    
-                    <p style="color: #666; font-size: 0.8rem; margin-bottom: 1rem;">
-                        Escanea este código en la tienda para completar el pago
-                    </p>
-                </div>
-                
-                <button onclick="aceptarPagoConQR()" style="width: 100%; padding: 1rem; background: var(--success-color); color: white; border: none; border-radius: var(--border-radius); font-size: 1.1rem; font-weight: bold; cursor: pointer;">
-                    ✅ ACEPTAR PAGO
-                </button>
-            </div>
-        </div>
-    `;
-    
-    document.body.appendChild(modal);
+    // Usar la función del módulo para mostrar el QR
+    mostrarQRPago(datosPago);
 }
 
 // ===== CERRAR MODAL QR PAGO =====
