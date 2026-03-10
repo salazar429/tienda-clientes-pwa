@@ -1,10 +1,10 @@
 // ===========================================
-// APP TIENDA CLIENTES - VERSIÓN CON PAGOS Y PEDIDOS
+// APP TIENDA CLIENTES - VERSIÓN FINAL CON MENÚ LATERAL
 // ===========================================
+
 // Importar funciones del generador QR
 import { mostrarQRPago, descargarQRPago, cerrarModalQrPago } from './Generar_QR.js';
 
-//const API_URL = 'https://sistema-test-api.onrender.com';
 const API_URL = 'https://sistema-test-api.onrender.com';
 
 // Estado global de la aplicación
@@ -29,10 +29,11 @@ const App = {
     cantidadEscanearTemp: 1,
     compraExitosa: false,
     clienteActual: {
-        nombre: 'Cliente',
+        nombre: 'Cliente Demo',
         email: 'cliente@email.com',
         telefono: '1234567890'
-    }
+    },
+    menuAbierto: false
 };
 
 // Elementos del DOM
@@ -106,6 +107,169 @@ function registerServiceWorker() {
                 console.error('❌ Error registrando Service Worker:', error);
             });
     }
+}
+
+// ===== MENÚ LATERAL =====
+function mostrarMenuLateral() {
+    // Si ya existe un menú, cerrarlo
+    const menuExistente = document.getElementById('menuLateral');
+    if (menuExistente) {
+        menuExistente.remove();
+        App.menuAbierto = false;
+        return;
+    }
+    
+    App.menuAbierto = true;
+    
+    // Crear overlay
+    const overlay = document.createElement('div');
+    overlay.className = 'menu-overlay';
+    overlay.id = 'menuOverlay';
+    overlay.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0,0,0,0.5);
+        z-index: 1500;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    `;
+    
+    // Crear menú lateral
+    const menu = document.createElement('div');
+    menu.className = 'menu-lateral';
+    menu.id = 'menuLateral';
+    menu.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: -300px;
+        width: 280px;
+        height: 100vh;
+        background: white;
+        z-index: 1501;
+        box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+        transition: left 0.3s ease;
+        overflow-y: auto;
+    `;
+    
+    // Calcular estadísticas
+    const favoritosCount = App.favoritos.length;
+    const carritoCount = App.carrito.reduce((sum, item) => sum + item.cantidad, 0);
+    const pendientesCount = App.pedidosPendientes.filter(p => p.estado !== 'completado').length;
+    
+    // Contenido del menú
+    menu.innerHTML = `
+        <div style="background: linear-gradient(135deg, var(--primary-color), var(--secondary-color)); color: white; padding: 2rem 1rem; text-align: center;">
+            <div style="font-size: 3rem; margin-bottom: 0.5rem;">🛍️</div>
+            <h2 style="margin: 0; font-size: 1.2rem;">Mi Tienda</h2>
+            <p style="margin: 0.3rem 0 0; font-size: 0.8rem; opacity: 0.9;">Versión 2.0</p>
+        </div>
+        
+        <div style="padding: 1rem;">
+            <div style="margin-bottom: 1.5rem;">
+                <h3 style="color: var(--dark-color); font-size: 0.9rem; margin-bottom: 0.5rem;">RESUMEN</h3>
+                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.5rem;">
+                    <div style="background: #f8f9fa; padding: 0.8rem; border-radius: 8px; text-align: center;">
+                        <div style="font-size: 1.2rem;">❤️</div>
+                        <div style="font-size: 1.1rem; font-weight: bold;">${favoritosCount}</div>
+                        <div style="font-size: 0.7rem; color: #666;">Favoritos</div>
+                    </div>
+                    <div style="background: #f8f9fa; padding: 0.8rem; border-radius: 8px; text-align: center;">
+                        <div style="font-size: 1.2rem;">🛒</div>
+                        <div style="font-size: 1.1rem; font-weight: bold;">${carritoCount}</div>
+                        <div style="font-size: 0.7rem; color: #666;">En carrito</div>
+                    </div>
+                    <div style="background: #f8f9fa; padding: 0.8rem; border-radius: 8px; text-align: center;">
+                        <div style="font-size: 1.2rem;">📦</div>
+                        <div style="font-size: 1.1rem; font-weight: bold;">${pendientesCount}</div>
+                        <div style="font-size: 0.7rem; color: #666;">Pendientes</div>
+                    </div>
+                    <div style="background: #f8f9fa; padding: 0.8rem; border-radius: 8px; text-align: center;">
+                        <div style="font-size: 1.2rem;">📋</div>
+                        <div style="font-size: 1.1rem; font-weight: bold;">${App.historial.length}</div>
+                        <div style="font-size: 0.7rem; color: #666;">Historial</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div style="margin-bottom: 1.5rem;">
+                <h3 style="color: var(--dark-color); font-size: 0.9rem; margin-bottom: 0.5rem;">NAVEGACIÓN RÁPIDA</h3>
+                <div style="display: flex; flex-direction: column; gap: 0.3rem;">
+                    <button onclick="navegarDesdeMenu('dashboard')" style="display: flex; align-items: center; gap: 0.8rem; padding: 0.8rem; background: none; border: none; border-radius: 8px; cursor: pointer; width: 100%; text-align: left;">
+                        <span style="font-size: 1.2rem;">🏠</span>
+                        <span>Inicio</span>
+                    </button>
+                    <button onclick="navegarDesdeMenu('escanear')" style="display: flex; align-items: center; gap: 0.8rem; padding: 0.8rem; background: none; border: none; border-radius: 8px; cursor: pointer; width: 100%; text-align: left;">
+                        <span style="font-size: 1.2rem;">📷</span>
+                        <span>Escanear QR</span>
+                    </button>
+                    <button onclick="navegarDesdeMenu('favoritos')" style="display: flex; align-items: center; gap: 0.8rem; padding: 0.8rem; background: none; border: none; border-radius: 8px; cursor: pointer; width: 100%; text-align: left;">
+                        <span style="font-size: 1.2rem;">❤️</span>
+                        <span>Favoritos</span>
+                    </button>
+                    <button onclick="navegarDesdeMenu('pendientes')" style="display: flex; align-items: center; gap: 0.8rem; padding: 0.8rem; background: none; border: none; border-radius: 8px; cursor: pointer; width: 100%; text-align: left;">
+                        <span style="font-size: 1.2rem;">📦</span>
+                        <span>Pedidos Pendientes</span>
+                        ${pendientesCount > 0 ? `<span style="background: var(--danger-color); color: white; padding: 0.2rem 0.5rem; border-radius: 10px; font-size: 0.7rem; margin-left: auto;">${pendientesCount}</span>` : ''}
+                    </button>
+                    <button onclick="navegarDesdeMenu('carrito')" style="display: flex; align-items: center; gap: 0.8rem; padding: 0.8rem; background: none; border: none; border-radius: 8px; cursor: pointer; width: 100%; text-align: left;">
+                        <span style="font-size: 1.2rem;">🛒</span>
+                        <span>Carrito</span>
+                        ${carritoCount > 0 ? `<span style="background: var(--primary-color); color: white; padding: 0.2rem 0.5rem; border-radius: 10px; font-size: 0.7rem; margin-left: auto;">${carritoCount}</span>` : ''}
+                    </button>
+                    <button onclick="navegarDesdeMenu('historial')" style="display: flex; align-items: center; gap: 0.8rem; padding: 0.8rem; background: var(--success-color); color: white; border: none; border-radius: 8px; cursor: pointer; width: 100%; text-align: left; margin-top: 0.5rem;">
+                        <span style="font-size: 1.2rem;">📋</span>
+                        <span>Ver Historial de Compras</span>
+                    </button>
+                </div>
+            </div>
+            
+            <div style="margin-top: 2rem; padding-top: 1rem; border-top: 1px solid #eee;">
+                <h3 style="color: var(--dark-color); font-size: 0.9rem; margin-bottom: 0.5rem;">INFORMACIÓN</h3>
+                <div style="font-size: 0.8rem; color: #666; line-height: 1.6;">
+                    <p>👤 Cliente: ${App.clienteActual.nombre}</p>
+                    <p>📧 ${App.clienteActual.email}</p>
+                    <p>📱 ${App.clienteActual.telefono}</p>
+                    <p style="margin-top: 0.5rem;">🕒 Última actualización: ${new Date().toLocaleTimeString()}</p>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(overlay);
+    document.body.appendChild(menu);
+    
+    // Animar entrada
+    setTimeout(() => {
+        overlay.style.opacity = '1';
+        menu.style.left = '0';
+    }, 10);
+    
+    // Cerrar al hacer clic en overlay
+    overlay.addEventListener('click', cerrarMenuLateral);
+}
+
+function cerrarMenuLateral() {
+    const overlay = document.getElementById('menuOverlay');
+    const menu = document.getElementById('menuLateral');
+    
+    if (overlay && menu) {
+        overlay.style.opacity = '0';
+        menu.style.left = '-300px';
+        
+        setTimeout(() => {
+            overlay.remove();
+            menu.remove();
+            App.menuAbierto = false;
+        }, 300);
+    }
+}
+
+function navegarDesdeMenu(pagina) {
+    cerrarMenuLateral();
+    mostrarPagina(pagina);
 }
 
 // ===== NAVEGACIÓN =====
@@ -211,29 +375,6 @@ function generarEscanear() {
                 <div id="estadoEscaner" class="estado" style="text-align: center; padding: 20px; color: #666; background-color: #f9f9f9; border-radius: 10px; margin: 20px 0; border-left: 5px solid #2196F3; font-size: 18px;">
                     👆 Haz clic en "ABRIR CÁMARA" para comenzar
                 </div>
-                
-                <style>
-                    @keyframes pulse {
-                        0% { border-color: rgba(76, 175, 80, 0.8); }
-                        50% { border-color: rgba(76, 175, 80, 1); }
-                        100% { border-color: rgba(76, 175, 80, 0.8); }
-                    }
-                    
-                    @keyframes spin {
-                        0% { transform: rotate(0deg); }
-                        100% { transform: rotate(360deg); }
-                    }
-                    
-                    .loading {
-                        display: inline-block;
-                        width: 30px;
-                        height: 30px;
-                        border: 5px solid #f3f3f3;
-                        border-top: 5px solid #4CAF50;
-                        border-radius: 50%;
-                        animation: spin 1s linear infinite;
-                    }
-                </style>
             </div>
         </div>
     `;
@@ -709,8 +850,6 @@ function procesarEnvioACasa() {
 }
 
 // ===== MOSTRAR QR DE PAGO =====
-
-     // ===== MOSTRAR QR DE PAGO (VERSIÓN ACTUALIZADA) =====
 function mostrarQrPago() {
     if (App.carrito.length === 0) {
         mostrarNotificacion('❌ El carrito está vacío');
@@ -754,110 +893,6 @@ function mostrarQrPago() {
     
     // Usar la función del módulo para mostrar el QR
     mostrarQRPago(datosPago);
-}
-
-// ===== CERRAR MODAL QR PAGO =====
-function cerrarModalQrPago() {
-    const modal = document.getElementById('qrPagoModal');
-    if (modal) {
-        modal.remove();
-    }
-}
-
-// ===== ACEPTAR PAGO CON QR =====
-function aceptarPagoConQR() {
-    cerrarModalQrPago();
-    
-    if (!App.pedidoTemporal) {
-        mostrarNotificacion('❌ Error al procesar el pago');
-        return;
-    }
-    
-    // Crear pedido pendiente
-    const pedido = {
-        id: App.pedidoTemporal.id,
-        fecha: App.pedidoTemporal.fecha,
-        cliente: App.pedidoTemporal.cliente,
-        productos: App.pedidoTemporal.productos.map(p => ({
-            id: p.id || Date.now().toString(),
-            nombre: p.nombre,
-            precio: p.precio,
-            cantidad: p.cantidad
-        })),
-        total: App.pedidoTemporal.total,
-        tipoPago: 'pagar',
-        estado: 'pendiente'
-    };
-    
-    // Guardar en pedidos pendientes
-    App.pedidosPendientes.push(pedido);
-    localStorage.setItem('pedidosPendientes', JSON.stringify(App.pedidosPendientes));
-    
-    // Vaciar carrito
-    App.carrito = [];
-    localStorage.setItem('carrito', JSON.stringify(App.carrito));
-    
-    // Actualizar badge
-    actualizarBadgeCarrito();
-    
-    // Limpiar temporal
-    App.pedidoTemporal = null;
-    
-    // Mostrar notificación
-    mostrarNotificacion('✅ Pago registrado - Pedido pendiente');
-    
-    // Redirigir a pedidos pendientes
-    mostrarPagina('pendientes');
-}
-
-// ===== CANCELAR PEDIDO =====
-function cancelarPedido(id) {
-    const index = App.pedidosPendientes.findIndex(p => p.id === id);
-    
-    if (index !== -1) {
-        App.pedidosPendientes[index].estado = 'cancelado';
-        
-        // Mover a historial después de 2 segundos
-        setTimeout(() => {
-            const pedidoCancelado = App.pedidosPendientes.splice(index, 1)[0];
-            App.historial.push(pedidoCancelado);
-            localStorage.setItem('historial', JSON.stringify(App.historial));
-            localStorage.setItem('pedidosPendientes', JSON.stringify(App.pedidosPendientes));
-            
-            if (App.currentPage === 'pendientes' || App.currentPage === 'historial') {
-                mostrarPagina(App.currentPage);
-            }
-        }, 2000);
-        
-        localStorage.setItem('pedidosPendientes', JSON.stringify(App.pedidosPendientes));
-        mostrarPagina('pendientes');
-        mostrarNotificacion('❌ Pedido cancelado');
-    }
-}
-
-// ===== MARCAR COMO COMPLETADO =====
-function marcarCompletado(id) {
-    const index = App.pedidosPendientes.findIndex(p => p.id === id);
-    
-    if (index !== -1) {
-        App.pedidosPendientes[index].estado = 'completado';
-        
-        // Mover a historial después de 1 segundo
-        setTimeout(() => {
-            const pedidoCompletado = App.pedidosPendientes.splice(index, 1)[0];
-            App.historial.push(pedidoCompletado);
-            localStorage.setItem('historial', JSON.stringify(App.historial));
-            localStorage.setItem('pedidosPendientes', JSON.stringify(App.pedidosPendientes));
-            
-            if (App.currentPage === 'pendientes' || App.currentPage === 'historial') {
-                mostrarPagina(App.currentPage);
-            }
-        }, 1000);
-        
-        localStorage.setItem('pedidosPendientes', JSON.stringify(App.pedidosPendientes));
-        mostrarPagina('pendientes');
-        mostrarNotificacion('✅ Pedido completado');
-    }
 }
 
 // ===== GENERADORES DE COMPONENTES =====
@@ -1095,62 +1130,6 @@ function eliminarDelCarrito(id) {
     mostrarNotificacion('✅ Producto eliminado del carrito');
 }
 
-function completarCompra() {
-    if (App.carrito.length === 0) {
-        mostrarNotificacion('❌ El carrito está vacío');
-        return;
-    }
-    
-    // Verificar stock antes de completar
-    for (const item of App.carrito) {
-        const producto = App.productos.find(p => p.id === item.id);
-        if (!producto || producto.stock < item.cantidad) {
-            mostrarNotificacion(`❌ Stock insuficiente para ${producto ? producto.nombre : 'producto'}`);
-            return;
-        }
-    }
-    
-    // Calcular total
-    const total = App.carrito.reduce((sum, item) => {
-        const producto = App.productos.find(p => p.id === item.id);
-        return sum + (producto ? producto.precio * item.cantidad : 0);
-    }, 0);
-    
-    // Crear registro de compra para el historial
-    const compra = {
-        id: Date.now().toString(),
-        fecha: new Date().toISOString(),
-        productos: App.carrito.map(item => {
-            const producto = App.productos.find(p => p.id === item.id);
-            return {
-                id: item.id,
-                nombre: producto ? producto.nombre : 'Producto',
-                precio: producto ? producto.precio : 0,
-                cantidad: item.cantidad
-            };
-        }),
-        total: total
-    };
-    
-    // Guardar en historial
-    App.historial.unshift(compra);
-    localStorage.setItem('historial', JSON.stringify(App.historial));
-    
-    // Vaciar carrito
-    App.carrito = [];
-    localStorage.setItem('carrito', JSON.stringify(App.carrito));
-    
-    // Actualizar badge
-    actualizarBadgeCarrito();
-    
-    // Marcar compra exitosa y mostrar mensaje en la página de carrito
-    App.compraExitosa = true;
-    mostrarPagina('carrito');
-    
-    // Mostrar notificación de éxito
-    mostrarNotificacion('✅ ¡COMPRA REALIZADA CON ÉXITO!');
-}
-
 function actualizarBadgeCarrito() {
     const totalItems = App.carrito.reduce((sum, item) => sum + item.cantidad, 0);
     DOM.cartBadge.textContent = totalItems;
@@ -1191,13 +1170,11 @@ function iniciarEscaner() {
         } 
     })
     .then(stream => {
-        // Éxito con cámara trasera exacta
         manejarStreamExitoso(stream, video, videoContainer, orientacionInfo, estado, btn, btnDetener);
     })
     .catch(err => {
         console.log('Error con cámara trasera exacta, intentando sin exact:', err);
         
-        // Intentar sin 'exact'
         return navigator.mediaDevices.getUserMedia({ 
             video: { 
                 facingMode: "environment",
@@ -1227,10 +1204,6 @@ function manejarStreamExitoso(stream, video, videoContainer, orientacionInfo, es
     const videoTracks = stream.getVideoTracks();
     if (videoTracks.length > 0) {
         const track = videoTracks[0];
-        const settings = track.getSettings();
-        console.log('Cámara:', track.label);
-        console.log('Settings:', settings);
-        
         orientacionInfo.style.display = 'block';
         orientacionInfo.innerHTML = `📐 Usando: ${track.label || 'Cámara trasera'}<br>Orientación normal - sin espejo`;
     }
@@ -1341,13 +1314,11 @@ function escanearArchivo(file) {
 }
 
 function procesarResultadoQR(texto) {
-    // Buscar producto por ID (asumiendo que el QR contiene el ID del producto)
     const producto = App.productos.find(p => p.id === texto);
     
     if (producto) {
         mostrarProductoEscanear(producto);
     } else {
-        // Si no encuentra por ID exacto, buscar por nombre o código
         const productoAlternativo = App.productos.find(p => 
             (p.codigo && p.codigo === texto) || 
             (p.nombre && p.nombre.toLowerCase().includes(texto.toLowerCase()))
@@ -1357,8 +1328,6 @@ function procesarResultadoQR(texto) {
             mostrarProductoEscanear(productoAlternativo);
         } else {
             mostrarNotificacion('❌ Producto no encontrado');
-            
-            // Mostrar el texto escaneado por si acaso
             document.getElementById('estadoEscaner').innerHTML = `QR detectado: ${texto}`;
         }
     }
@@ -1412,7 +1381,6 @@ function mostrarProductoEscanear(producto) {
         </div>
     `;
     
-    // Configurar eventos
     setTimeout(() => {
         document.getElementById('btnRestar')?.addEventListener('click', () => {
             if (App.cantidadEscanearTemp > 1) {
@@ -1448,6 +1416,54 @@ function cerrarProductoEscanearModal() {
     DOM.productoEscanearModal.classList.remove('active');
     App.productoEscanearTemp = null;
     App.cantidadEscanearTemp = 1;
+}
+
+// ===== CANCELAR PEDIDO =====
+function cancelarPedido(id) {
+    const index = App.pedidosPendientes.findIndex(p => p.id === id);
+    
+    if (index !== -1) {
+        App.pedidosPendientes[index].estado = 'cancelado';
+        
+        setTimeout(() => {
+            const pedidoCancelado = App.pedidosPendientes.splice(index, 1)[0];
+            App.historial.push(pedidoCancelado);
+            localStorage.setItem('historial', JSON.stringify(App.historial));
+            localStorage.setItem('pedidosPendientes', JSON.stringify(App.pedidosPendientes));
+            
+            if (App.currentPage === 'pendientes' || App.currentPage === 'historial') {
+                mostrarPagina(App.currentPage);
+            }
+        }, 2000);
+        
+        localStorage.setItem('pedidosPendientes', JSON.stringify(App.pedidosPendientes));
+        mostrarPagina('pendientes');
+        mostrarNotificacion('❌ Pedido cancelado');
+    }
+}
+
+// ===== MARCAR COMO COMPLETADO =====
+function marcarCompletado(id) {
+    const index = App.pedidosPendientes.findIndex(p => p.id === id);
+    
+    if (index !== -1) {
+        App.pedidosPendientes[index].estado = 'completado';
+        
+        setTimeout(() => {
+            const pedidoCompletado = App.pedidosPendientes.splice(index, 1)[0];
+            App.historial.push(pedidoCompletado);
+            localStorage.setItem('historial', JSON.stringify(App.historial));
+            localStorage.setItem('pedidosPendientes', JSON.stringify(App.pedidosPendientes));
+            
+            if (App.currentPage === 'pendientes' || App.currentPage === 'historial') {
+                mostrarPagina(App.currentPage);
+            }
+        }, 1000);
+        
+        localStorage.setItem('pedidosPendientes', JSON.stringify(App.pedidosPendientes));
+        mostrarPagina('pendientes');
+        mostrarNotificacion('✅ Pedido completado');
+    }
 }
 
 // ===== CONEXIÓN =====
@@ -1513,7 +1529,7 @@ function setupEventListeners() {
         actualizarEstadoConexion();
     });
     
-    // Menú (para futuras funcionalidades)
+    // Menú lateral (ahora funcional)
     DOM.menuBtn.addEventListener('click', () => {
         mostrarMenuLateral();
     });
@@ -1529,13 +1545,11 @@ function setupEventListeners() {
 function configurarEventosPagina(pagina) {
     if (pagina === 'escanear') {
         setTimeout(() => {
-            // Botón de cámara
             document.getElementById('btnAbrirCamara')?.addEventListener('click', (e) => {
                 e.preventDefault();
                 iniciarEscaner();
             });
             
-            // Botón de archivo
             document.getElementById('fileInput')?.addEventListener('change', function(e) {
                 const archivo = e.target.files[0];
                 if (archivo) {
@@ -1544,7 +1558,6 @@ function configurarEventosPagina(pagina) {
                 this.value = '';
             });
             
-            // Botón detener
             document.getElementById('btnDetener')?.addEventListener('click', () => {
                 detenerCamara();
             });
@@ -1552,53 +1565,59 @@ function configurarEventosPagina(pagina) {
     }
 }
 
-// ===== MENÚ LATERAL (placeholder) =====
-function mostrarMenuLateral() {
-    mostrarNotificacion('Menú en desarrollo');
-}
-
-// ===== INSTALACIÓN PWA =====
-window.addEventListener('beforeinstallprompt', (e) => {
-    e.preventDefault();
-    App.installPrompt = e;
-    DOM.installButton.style.display = 'flex';
-});
-
-DOM.installButton.addEventListener('click', async () => {
-    if (!App.installPrompt) return;
+// ===== FUNCIONES PARA EL MÓDULO QR =====
+window.aceptarPagoConQR = function() {
+    cerrarModalQrPago();
     
-    DOM.installButton.style.display = 'none';
-    App.installPrompt.prompt();
-    
-    const { outcome } = await App.installPrompt.userChoice;
-    
-    if (outcome === 'accepted') {
-        mostrarNotificacion('✅ Instalando aplicación...');
+    if (!App.pedidoTemporal) {
+        mostrarNotificacion('❌ Error al procesar el pago');
+        return;
     }
     
-    App.installPrompt = null;
-});
+    const pedido = {
+        id: App.pedidoTemporal.id,
+        fecha: App.pedidoTemporal.fecha,
+        cliente: App.pedidoTemporal.cliente,
+        productos: App.pedidoTemporal.productos.map(p => ({
+            id: p.id || Date.now().toString(),
+            nombre: p.nombre,
+            precio: p.precio,
+            cantidad: p.cantidad
+        })),
+        total: App.pedidoTemporal.total,
+        tipoPago: 'pagar',
+        estado: 'pendiente'
+    };
+    
+    App.pedidosPendientes.push(pedido);
+    localStorage.setItem('pedidosPendientes', JSON.stringify(App.pedidosPendientes));
+    
+    App.carrito = [];
+    localStorage.setItem('carrito', JSON.stringify(App.carrito));
+    
+    actualizarBadgeCarrito();
+    App.pedidoTemporal = null;
+    
+    mostrarNotificacion('✅ Pago registrado - Pedido pendiente');
+    mostrarPagina('pendientes');
+};
 
-window.addEventListener('appinstalled', () => {
-    DOM.installButton.style.display = 'none';
-    mostrarNotificacion('✅ App instalada correctamente');
-});
+window.descargarQRPago = descargarQRPago;
+window.cerrarModalQrPago = cerrarModalQrPago;
 
 // ===== EXPORTAR FUNCIONES GLOBALES =====
 window.mostrarPagina = mostrarPagina;
 window.verProducto = verProducto;
 window.cerrarModal = cerrarModal;
 window.cerrarModalOpcionesPago = cerrarModalOpcionesPago;
-window.cerrarModalQrPago = cerrarModalQrPago;
 window.cerrarProductoEscanearModal = cerrarProductoEscanearModal;
 window.toggleFavorito = toggleFavorito;
 window.agregarAlCarrito = agregarAlCarrito;
 window.modificarCantidad = modificarCantidad;
 window.eliminarDelCarrito = eliminarDelCarrito;
-window.completarCompra = completarCompra;
 window.filtrarPorCategoria = filtrarPorCategoria;
 window.mostrarOpcionesPago = mostrarOpcionesPago;
 window.procesarOpcionPago = procesarOpcionPago;
-window.aceptarPagoConQR = aceptarPagoConQR;
 window.cancelarPedido = cancelarPedido;
 window.marcarCompletado = marcarCompletado;
+window.navegarDesdeMenu = navegarDesdeMenu;
