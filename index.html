@@ -19,8 +19,6 @@
     <!-- Scripts -->
     <script src="https://unpkg.com/jsqr@1.4.0/dist/jsQR.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
-    <script type="module" src="Generar_QR.js"></script>
-    <script src="app.js"></script>
 </head>
 <body>
     <!-- Splash Screen -->
@@ -30,6 +28,76 @@
             <h1>Mi Tienda</h1>
             <p>Cargando tu experiencia de compra...</p>
             <div class="splash-spinner"></div>
+        </div>
+    </div>
+
+    <!-- Modal de Login/Registro -->
+    <div id="loginModal" class="modal active" style="z-index: 2500;">
+        <div class="modal-content" style="max-width: 400px;">
+            <div class="modal-header" style="background: linear-gradient(135deg, var(--primary-color), var(--secondary-color)); color: white;">
+                <h2 style="display: flex; align-items: center; gap: 0.5rem;">
+                    <span>🔐</span> Bienvenido a Mi Tienda
+                </h2>
+            </div>
+            <div class="modal-body" style="padding: 2rem 1.5rem;">
+                
+                <!-- Pestañas -->
+                <div style="display: flex; margin-bottom: 2rem; border-bottom: 2px solid #eee;">
+                    <button id="tabLogin" class="tab-btn active" style="flex: 1; padding: 0.8rem; background: none; border: none; border-bottom: 3px solid var(--primary-color); font-weight: bold; color: var(--primary-color); cursor: pointer;">
+                        Iniciar Sesión
+                    </button>
+                    <button id="tabRegistro" class="tab-btn" style="flex: 1; padding: 0.8rem; background: none; border: none; border-bottom: 3px solid transparent; font-weight: bold; color: #999; cursor: pointer;">
+                        Crear Cuenta
+                    </button>
+                </div>
+                
+                <!-- Formulario de Login -->
+                <div id="loginForm" style="display: block;">
+                    <div style="margin-bottom: 1.5rem;">
+                        <label style="display: block; margin-bottom: 0.5rem; font-weight: bold; color: var(--dark-color);">
+                            📱 Número de Teléfono
+                        </label>
+                        <input type="tel" id="loginTelefono" placeholder="Ej: 12345678" maxlength="8" style="width: 100%; padding: 0.8rem; border: 2px solid #ddd; border-radius: 8px; font-size: 1rem;">
+                        <small style="color: #666; display: block; margin-top: 0.3rem;">8 dígitos, sin espacios ni guiones</small>
+                    </div>
+                    
+                    <button onclick="procesarLogin()" style="width: 100%; padding: 1rem; background: var(--primary-color); color: white; border: none; border-radius: 8px; font-size: 1.1rem; font-weight: bold; cursor: pointer;">
+                        🔓 INICIAR SESIÓN
+                    </button>
+                </div>
+                
+                <!-- Formulario de Registro -->
+                <div id="registroForm" style="display: none;">
+                    <div style="margin-bottom: 1rem;">
+                        <label style="display: block; margin-bottom: 0.5rem; font-weight: bold; color: var(--dark-color);">
+                            👤 Nombre Completo <span style="color: #e74c3c;">*</span>
+                        </label>
+                        <input type="text" id="regNombre" placeholder="Ej: Juan Pérez" style="width: 100%; padding: 0.8rem; border: 2px solid #ddd; border-radius: 8px; font-size: 1rem;">
+                    </div>
+                    
+                    <div style="margin-bottom: 1rem;">
+                        <label style="display: block; margin-bottom: 0.5rem; font-weight: bold; color: var(--dark-color);">
+                            📱 Número de Teléfono <span style="color: #e74c3c;">*</span>
+                        </label>
+                        <input type="tel" id="regTelefono" placeholder="Ej: 12345678" maxlength="8" style="width: 100%; padding: 0.8rem; border: 2px solid #ddd; border-radius: 8px; font-size: 1rem;">
+                        <small style="color: #666; display: block; margin-top: 0.3rem;">8 dígitos exactos</small>
+                    </div>
+                    
+                    <div style="margin-bottom: 1.5rem;">
+                        <label style="display: block; margin-bottom: 0.5rem; font-weight: bold; color: var(--dark-color);">
+                            🏠 Dirección (opcional)
+                        </label>
+                        <input type="text" id="regDireccion" placeholder="Ej: Calle Principal #123" style="width: 100%; padding: 0.8rem; border: 2px solid #ddd; border-radius: 8px; font-size: 1rem;">
+                    </div>
+                    
+                    <button onclick="procesarRegistro()" style="width: 100%; padding: 1rem; background: var(--success-color); color: white; border: none; border-radius: 8px; font-size: 1.1rem; font-weight: bold; cursor: pointer;">
+                        ✅ CREAR CUENTA
+                    </button>
+                </div>
+                
+                <!-- Mensaje de error/éxito -->
+                <div id="loginMensaje" style="margin-top: 1rem; padding: 0.8rem; border-radius: 5px; display: none;"></div>
+            </div>
         </div>
     </div>
 
@@ -59,37 +127,37 @@
         <!-- Las páginas se cargarán aquí dinámicamente -->
     </main>
 
-    <!-- Menú inferior con 5 opciones actualizadas -->
-<nav class="bottom-nav">
-    <!-- Izquierda -->
-    <a href="#" class="nav-item" data-page="escanear">
-        <span class="nav-icon">📷</span>
-        <span class="nav-label">Escanear</span>
-    </a>
-    
-    <a href="#" class="nav-item" data-page="favoritos">
-        <span class="nav-icon">❤️</span>
-        <span class="nav-label">Favoritos</span>
-    </a>
-    
-    <!-- Centro - DASHBOARD -->
-    <a href="#" class="nav-item active" data-page="dashboard">
-        <span class="nav-icon nav-icon-center">🏠</span>
-        <span class="nav-label">Inicio</span>
-    </a>
-    
-    <!-- Derecha -->
-    <a href="#" class="nav-item" data-page="pendientes">
-        <span class="nav-icon">📦</span>
-        <span class="nav-label">Pendientes</span>
-    </a>
-    
-    <a href="#" class="nav-item" data-page="carrito">
-        <span class="nav-icon">🛒</span>
-        <span class="nav-label">Carrito</span>
-        <span id="cartBadge" class="badge">0</span>
-    </a>
-</nav>
+    <!-- Menú inferior con 5 opciones -->
+    <nav class="bottom-nav">
+        <!-- Izquierda -->
+        <a href="#" class="nav-item" data-page="escanear">
+            <span class="nav-icon">📷</span>
+            <span class="nav-label">Escanear</span>
+        </a>
+        
+        <a href="#" class="nav-item" data-page="favoritos">
+            <span class="nav-icon">❤️</span>
+            <span class="nav-label">Favoritos</span>
+        </a>
+        
+        <!-- Centro - DASHBOARD -->
+        <a href="#" class="nav-item active" data-page="dashboard">
+            <span class="nav-icon nav-icon-center">🏠</span>
+            <span class="nav-label">Inicio</span>
+        </a>
+        
+        <!-- Derecha -->
+        <a href="#" class="nav-item" data-page="pendientes">
+            <span class="nav-icon">📦</span>
+            <span class="nav-label">Pendientes</span>
+        </a>
+        
+        <a href="#" class="nav-item" data-page="carrito">
+            <span class="nav-icon">🛒</span>
+            <span class="nav-label">Carrito</span>
+            <span id="cartBadge" class="badge">0</span>
+        </a>
+    </nav>
 
     <!-- Botón de instalar PWA -->
     <button id="install-button" class="install-button" style="display: none;">
@@ -126,6 +194,9 @@
         </div>
     </div>
 
+    <!-- Scripts al final -->
+    <script src="usuarios.js"></script>
+    <script type="module" src="Generar_QR.js"></script>
     <script src="app.js"></script>
 </body>
 </html>
