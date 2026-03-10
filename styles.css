@@ -871,3 +871,76 @@ header {
 #productoEscanearBody .cantidad-btn:active {
     transform: scale(0.95);
 }
+
+
+
+/* Estilos para pedidos pendientes */
+.pedido-card {
+    transition: all 0.3s ease;
+    animation: slideIn 0.3s ease;
+}
+
+.pedido-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+}
+
+/* Estilos para opciones de pago */
+.opcion-pago {
+    transition: all 0.3s ease;
+}
+
+.opcion-pago:hover {
+    background: #f8f9fa;
+}
+
+.opcion-pago input[type="radio"] {
+    accent-color: var(--success-color);
+}
+
+/* Estilos para el QR simulado */
+#qrPagoModal .modal-content {
+    animation: scaleIn 0.3s ease;
+}
+
+@keyframes scaleIn {
+    from {
+        transform: scale(0.9);
+        opacity: 0;
+    }
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+/* Estilos para el dashboard */
+.dashboard-bienvenida {
+    animation: fadeIn 0.5s ease;
+}
+
+/* Badge para pendientes */
+#pendientesBadge {
+    position: absolute;
+    top: 2px;
+    right: 10px;
+    background: var(--danger-color);
+    color: white;
+    font-size: 0.7rem;
+    min-width: 18px;
+    height: 18px;
+    border-radius: 9px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 4px;
+}
+
+
+
+
+
+
+
+
+
